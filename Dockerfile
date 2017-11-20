@@ -58,6 +58,6 @@ RUN wget https://github.com/opencv/opencv/archive/3.2.0.zip \
 && rm /3.2.0.zip \
 && rm -r /opencv-3.2.0
 
-RUN ln -s /root/fcn/fcn/external /usr/local/lib/python3.5/dist-packages/fcn/
+RUN ln -s /root/fcn/fcn/external /usr/local/lib/python2.7/dist-packages/fcn/
 
 WORKDIR /root
