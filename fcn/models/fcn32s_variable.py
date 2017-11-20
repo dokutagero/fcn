@@ -4,7 +4,7 @@ import chainer
 import chainer.functions as F
 import chainer.links as L
 import numpy as np
-
+from .conv_sizes import get_crop_pad
 from .. import data
 from .. import initializers
 
@@ -106,7 +106,12 @@ class FCN32s(chainer.Chain):
 
         # upscore
         h = self.upscore(score_fr)
-        h = h[:, :, 19:19 + x.data.shape[2], 19:19 + x.data.shape[3]]
+        rows = x.shape[2]
+        cols = x.shape[3]
+        crop_pad_rows = int(get_crop_pad(rows))
+        crop_pad_cols = int(get_crop_pad(cols))
+        h = h[:, :, crop_pad_rows:crop_pad_rows + x.data.shape[2],
+              crop_pad_cols:crop_pad_cols + x.data.shape[3]]
         score = h  # 1/1
         self.score = score
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import pdb
 
 import argparse
 import datetime
@@ -8,12 +9,12 @@ import subprocess
 import chainer
 from chainer import cuda
 
-import fcn
+# import fcn
+# from fcn import datasets
 from fcn import datasets
-
+import fcn.models
 
 here = osp.dirname(osp.abspath(__file__))
-
 
 def main():
     parser = argparse.ArgumentParser(
@@ -36,23 +37,24 @@ def main():
 
     # 1. dataset
 
-    dataset_train = datasets.SBDClassSeg(split='train')
-    dataset_valid = datasets.VOC2011ClassSeg(split='seg11valid')
+    pdb.set_trace()
+    dataset_train = datasets.BridgeSeg(split='train')
+    dataset_valid = datasets.BridgeSeg(split='validation')
 
     iter_train = chainer.iterators.MultiprocessIterator(
-        dataset_train, batch_size=1, shared_mem=10 ** 7)
+        dataset_train, batch_size=1, shared_mem=None)
     iter_valid = chainer.iterators.MultiprocessIterator(
-        dataset_valid, batch_size=1, shared_mem=10 ** 7,
+        dataset_valid, batch_size=1, shared_mem=None,
         repeat=False, shuffle=False)
 
-    # 2. model
+  # 2. model
 
     n_class = len(dataset_train.class_names)
 
     vgg = fcn.models.VGG16()
     chainer.serializers.load_npz(vgg.pretrained_model, vgg)
 
-    model = fcn.models.FCN32s(n_class=n_class)
+    model = fcn.models.FCN32s_variable(n_class=n_class)
     model.init_from_vgg16(vgg)
 
     if gpu >= 0:
@@ -70,8 +72,9 @@ def main():
                 lr=optimizer.lr * 2, momentum=0)
     model.upscore.disable_update()
 
-    # training loop
+  # training loop
 
+    pdb.set_trace()
     trainer = fcn.Trainer(
         device=gpu,
         model=model,
@@ -79,7 +82,7 @@ def main():
         iter_train=iter_train,
         iter_valid=iter_valid,
         out=out,
-        max_iter=100000,
+        max_iter=1,
     )
     trainer.train()
 
