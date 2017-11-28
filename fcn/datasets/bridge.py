@@ -21,8 +21,8 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
             imgsets_file = osp.join(DATASET_BRIDGE_DIR, "{}.txt".format(split))
             for did in open(imgsets_file):
                 did = did.strip()
-                img_file = osp.join(DATASET_BRIDGE_DIR, 'images/combined/', '{}.jpg'.format(did))
-                lbl_file = osp.join(DATASET_BRIDGE_DIR, 'bridge_masks/combined/', '{}.png'.format(did))
+                img_file = osp.join(DATASET_BRIDGE_DIR, 'images/combined2/', '{}.jpg'.format(did))
+                lbl_file = osp.join(DATASET_BRIDGE_DIR, 'bridge_masks/combined2/', '{}.png'.format(did))
                 self.files[split].append({
                     'img' : img_file,
                     'lbl' : lbl_file,
@@ -35,8 +35,12 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         data_file = self.files[self.split][index]
         img_file = data_file['img']
         img = Image.open(img_file)
+        wsize = int(float(img.size[0]) * 0.5)
+        hsize = int(float(img.size[1]) * 0.5)
+        img = img.resize((wsize, hsize))
         lbl_file = data_file['lbl']
         lbl = Image.open(lbl_file)
+        lbl = lbl.resize((wsize, hsize))
 
         img = np.array(img, dtype=np.uint8)
         lbl = np.array(lbl, dtype=np.uint32)
