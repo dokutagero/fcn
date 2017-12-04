@@ -48,6 +48,7 @@ class Trainer(object):
             model,
             optimizer,
             iter_train,
+            iter_train_noncrop,
             iter_valid,
             out,
             max_iter,
@@ -62,6 +63,7 @@ class Trainer(object):
         self.iteration = 0
         self.max_iter = max_iter
         self.interval_validate = interval_validate
+        self.interval_validate = len(self.iter_train)
         self.stamp_start = None
         # for logging
         self.log_headers = [
@@ -73,6 +75,11 @@ class Trainer(object):
             'train/acc_cls',
             'train/mean_iu',
             'train/fwavacc',
+            'train_total/loss',
+            'train_total/acc',
+            'train_total/acc_cls',
+            'train_total/mean_iu',
+            'train_total/fwavacc',
             'valid/loss',
             'valid/acc',
             'valid/acc_cls',
@@ -117,21 +124,44 @@ class Trainer(object):
             for im, lt, lp in zip(img, lbl_true, lbl_pred):
                 lbl_trues.append(lt)
                 lbl_preds.append(lp)
-                if len(vizs) < n_viz:
+                if len(vizs) < n_viz and self.iteration % 500 == 0:
                     viz = utils.visualize_segmentation(
                         lbl_pred=lp, lbl_true=lt,
                         img=im, n_class=self.model.n_class)
                     vizs.append(viz)
         # save visualization
-        out_viz = osp.join(self.out, 'visualizations_valid',
-                           'iter%08d.jpg' % self.iteration)
-        if not osp.exists(osp.dirname(out_viz)):
-            os.makedirs(osp.dirname(out_viz))
-        viz = utils.get_tile_image(vizs)
-        skimage.io.imsave(out_viz, viz)
+        if self.iteration % 500 == 0:
+            out_viz = osp.join(self.out, 'visualizations_valid',
+                               'iter%08d.jpg' % self.iteration)
+            if not osp.exists(osp.dirname(out_viz)):
+                os.makedirs(osp.dirname(out_viz))
+            viz = utils.get_tile_image(vizs)
+            skimage.io.imsave(out_viz, viz)
+        
+        # Train set without cropping
+        iter_train_nocrop = copy.copy(self.iter_train_noncrop)
+        desc = 'train_nocrop [iteration=%08d]' % self.iteration
+        losses_train, lbl_trues_train, lbl_preds_train = [], [], []
+        for batch in tqdm.tqdm(iter_train_nocrop, desc=desc, total=len(dataset),
+                               ncols=80, leave=False):
+            img_train, lbl_true_train = zip(*batch)
+            batch = map(datasets.transform_lsvrc2012_vgg16, batch)
+            with chainer.no_backprop_mode(), \
+                    chainer.using_config('train', False):
+                in_vars = utils.batch_to_vars(batch, device=self.device)
+                loss_train = self.model(*in_vars)
+            losses_train.append(float(loss.data))
+            score = self.model.score
+            lbl_pred = chainer.functions.argmax(score, axis=1)
+            lbl_pred = chainer.cuda.to_cpu(lbl_pred.data)
+            for im, lt, lp in zip(img, lbl_true, lbl_pred):
+                lbl_trues_train.append(lt)
+                lbl_preds_train.append(lp)
         # generate log
         acc = utils.label_accuracy_score(
             lbl_trues, lbl_preds, self.model.n_class)
+        acc_train = utils.labels_accuracy_score(
+            lbl_trues_train, lbl_preds_train, self.model.n_class)
         self._write_log(**{
             'epoch': self.epoch,
             'iteration': self.iteration,
@@ -141,8 +171,13 @@ class Trainer(object):
             'valid/acc_cls': acc[1],
             'valid/mean_iu': acc[2],
             'valid/fwavacc': acc[3],
+            'train_total/loss': np.mean(losses_train),
+            'train_total/acc': acc_train[0],
+            'train_total/acc_cls': acc_train[1],
+            'train_total/mean_iu': acc_train[2],
+            'train_total/fwavacc': acc_train[3]
         })
-        if self.iteration % 5000 == 0:
+        if self.iteration % 3000 == 0:
             self._save_model()
 
     def _write_log(self, **kwargs):

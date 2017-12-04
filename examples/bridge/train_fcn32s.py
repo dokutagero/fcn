@@ -38,15 +38,21 @@ def main():
     # 1. dataset
 
     # pdb.set_trace()
-    dataset_train = datasets.BridgeSeg(split='train')
+    dataset_train = datasets.BridgeSeg(split='train', rcrop=[400,400])
+    dataset_train_nocrop = datasets.BridgeSeg(split='train')
     dataset_valid = datasets.BridgeSeg(split='validation')
 
     iter_train = chainer.iterators.MultiprocessIterator(
         dataset_train, batch_size=1, shared_mem=10 ** 7)
+    iter_train_nocrop = chainer.iterators.MultiprocessIterator(
+        dataset_train_nocrop, batch_size=1, shared_mem=10 ** 7)
     iter_valid = chainer.iterators.MultiprocessIterator(
         dataset_valid, batch_size=1, shared_mem=10 ** 7,
         repeat=False, shuffle=False)
 
+    train_samples = len(dataset_train)
+    print(train_samples)
+    nbepochs = 100
   # 2. model
 
     n_class = len(dataset_train.class_names)
@@ -80,9 +86,10 @@ def main():
         model=model,
         optimizer=optimizer,
         iter_train=iter_train,
+        iter_train_nocrop=iter_train_nocrop,
         iter_valid=iter_valid,
         out=out,
-        max_iter=40000,
+        max_iter=train_samples*nbepochs,
     )
     trainer.train()
 
