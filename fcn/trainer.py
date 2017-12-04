@@ -51,7 +51,7 @@ class Trainer(object):
             iter_valid,
             out,
             max_iter,
-            interval_validate=4000):
+            interval_validate=500):
         self.device = device
         self.model = model
         self.optimizer = optimizer
@@ -142,7 +142,8 @@ class Trainer(object):
             'valid/mean_iu': acc[2],
             'valid/fwavacc': acc[3],
         })
-        self._save_model()
+        if self.iteration % 5000 == 0:
+            self._save_model()
 
     def _write_log(self, **kwargs):
         log = collections.defaultdict(str)

@@ -37,14 +37,14 @@ def main():
 
     # 1. dataset
 
-    pdb.set_trace()
+    # pdb.set_trace()
     dataset_train = datasets.BridgeSeg(split='train')
     dataset_valid = datasets.BridgeSeg(split='validation')
 
     iter_train = chainer.iterators.MultiprocessIterator(
-        dataset_train, batch_size=1, shared_mem=None)
+        dataset_train, batch_size=1, shared_mem=10 ** 7)
     iter_valid = chainer.iterators.MultiprocessIterator(
-        dataset_valid, batch_size=1, shared_mem=None,
+        dataset_valid, batch_size=1, shared_mem=10 ** 7,
         repeat=False, shuffle=False)
 
   # 2. model
@@ -54,7 +54,7 @@ def main():
     vgg = fcn.models.VGG16()
     chainer.serializers.load_npz(vgg.pretrained_model, vgg)
 
-    model = fcn.models.FCN32s_variable(n_class=n_class)
+    model = fcn.models.FCN32s(n_class=n_class)
     model.init_from_vgg16(vgg)
 
     if gpu >= 0:
@@ -74,7 +74,7 @@ def main():
 
   # training loop
 
-    pdb.set_trace()
+    # pdb.set_trace()
     trainer = fcn.Trainer(
         device=gpu,
         model=model,
@@ -82,7 +82,7 @@ def main():
         iter_train=iter_train,
         iter_valid=iter_valid,
         out=out,
-        max_iter=1,
+        max_iter=40000,
     )
     trainer.train()
 

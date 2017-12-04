@@ -26,7 +26,7 @@ def infer(n_class):
     if args.model_file is None:
         args.model_file = fcn.models.FCN8s.download()
 
-    match = re.match('^fcn(32|16|8)s.*$', osp.basename(args.model_file))
+    match = re.match('^FCN(32|16|8)s.*$', osp.basename(args.model_file))
     if match is None:
         print('Unsupported model filename: %s' % args.model_file)
         quit(1)
@@ -47,6 +47,11 @@ def infer(n_class):
     for file in args.img_files:
         # input
         img = skimage.io.imread(file)
+        mask_path = '/home/dokutagero/repos/bridgedegradationseg/dataset/bridge_masks/combined2/'
+        mask_name = file.split('/')[-1].split('.')[0] + '.png'
+        print mask_name
+        mask = skimage.io.imread(mask_path + mask_name)
+        mask = mask / 255
         input, = fcn.datasets.transform_lsvrc2012_vgg16((img,))
         input = input[np.newaxis, :, :, :]
         if args.gpu >= 0:
@@ -62,12 +67,12 @@ def infer(n_class):
 
         # visualize
         viz = fcn.utils.visualize_segmentation(
-            lbl_pred=lbl_pred, img=img, n_class=n_class,
-            label_names=fcn.datasets.VOC2012ClassSeg.class_names)
+            lbl_true=mask, lbl_pred=lbl_pred, img=img, n_class=n_class,
+            label_names=fcn.datasets.BridgeSeg.class_names)
         out_file = osp.join(args.out_dir, osp.basename(file))
         skimage.io.imsave(out_file, viz)
         print('==> wrote to: %s' % out_file)
 
 
 if __name__ == '__main__':
-    infer(n_class=21)
+    infer(n_class=2)

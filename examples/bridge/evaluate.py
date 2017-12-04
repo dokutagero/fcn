@@ -18,7 +18,7 @@ def main():
                         help='if -1, use cpu only (default: 0)')
     args = parser.parse_args()
 
-    dataset = fcn.datasets.VOC2011ClassSeg('seg11valid')
+    dataset = fcn.datasets.BridgeSeg('train')
     n_class = len(dataset.class_names)
 
     basename = osp.basename(args.model_file).lower()
