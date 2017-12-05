@@ -150,6 +150,10 @@ class FCN16s(chainer.Chain):
                 l2 = getattr(self, l1.name)
             except Exception:
                 continue
+            print(l1.name)
+            print(l2.name)
+            print(l1.W.shape)
+            print(l2.W.shape)
             assert l1.W.shape == l2.W.shape
             l2.W.data[...] = l1.W.data[...]
             if l1.b is not None:
