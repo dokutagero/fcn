@@ -21,8 +21,8 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
             imgsets_file = osp.join(DATASET_BRIDGE_DIR, "{}.txt".format(split))
             for did in open(imgsets_file):
                 did = did.strip()
-                img_file = osp.join(DATASET_BRIDGE_DIR, 'images/combined/', '{}.jpg'.format(did))
-                lbl_file = osp.join(DATASET_BRIDGE_DIR, 'bridge_masks/combined/', '{}.png'.format(did))
+                img_file = osp.join(DATASET_BRIDGE_DIR, 'images/combined2/', '{}.jpg'.format(did))
+                lbl_file = osp.join(DATASET_BRIDGE_DIR, 'bridge_masks/combined2/', '{}.png'.format(did))
                 self.files[split].append({
                     'img' : img_file,
                     'lbl' : lbl_file,
@@ -53,12 +53,9 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         w, h = x.shape[1], x.shape[0]
         rangew = (w - random_crop_size[0]) // 2
         rangeh = (h - random_crop_size[1]) // 2
-        print(x.shape)
-        print(y.shape)
         offsetw = 0 if rangew==0 else np.random.randint(rangew)
         offseth = 0 if rangeh==0 else np.random.randint(rangeh)
         if y.any() != None:
-            print(y.shape)
             return x[offseth:offseth+random_crop_size[0], offsetw:offsetw+random_crop_size[1]], \
                     y[offseth:offseth+random_crop_size[0], offsetw:offsetw+random_crop_size[1]]
         else:

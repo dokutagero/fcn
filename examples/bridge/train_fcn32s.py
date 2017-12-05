@@ -45,7 +45,8 @@ def main():
     iter_train = chainer.iterators.MultiprocessIterator(
         dataset_train, batch_size=1, shared_mem=10 ** 7)
     iter_train_nocrop = chainer.iterators.MultiprocessIterator(
-        dataset_train_nocrop, batch_size=1, shared_mem=10 ** 7)
+        dataset_train_nocrop, batch_size=1, shared_mem=10 ** 7,
+        repeat=False, shuffle=False)
     iter_valid = chainer.iterators.MultiprocessIterator(
         dataset_valid, batch_size=1, shared_mem=10 ** 7,
         repeat=False, shuffle=False)
@@ -86,10 +87,11 @@ def main():
         model=model,
         optimizer=optimizer,
         iter_train=iter_train,
-        iter_train_nocrop=iter_train_nocrop,
+        iter_train_noncrop=iter_train_nocrop,
         iter_valid=iter_valid,
         out=out,
         max_iter=train_samples*nbepochs,
+        interval_validate=train_samples
     )
     trainer.train()
 
