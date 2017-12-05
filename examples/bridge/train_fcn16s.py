@@ -45,14 +45,21 @@ def main():
 
     # 1. dataset
 
-    dataset_train = datasets.SBDClassSeg(split='train')
-    dataset_valid = datasets.VOC2011ClassSeg(split='seg11valid')
+    dataset_train = datasets.BridgeSeg(split='train', rcrop=[400,400])
+    dataset_train_nocrop = datasets.BridgeSeg(split='train')
+    dataset_valid = datasets.BridgeSeg(split='validation')
 
     iter_train = chainer.iterators.MultiprocessIterator(
         dataset_train, batch_size=1, shared_mem=10 ** 7)
     iter_valid = chainer.iterators.MultiprocessIterator(
         dataset_valid, batch_size=1, shared_mem=10 ** 7,
         repeat=False, shuffle=False)
+    iter_train_nocrop = chainer.iterators.MultiprocessIterator(
+        dataset_train_nocrop, batch_size=1, shared_mem=10 ** 7)
+
+    train_samples = len(dataset_train)
+    print(train_samples)
+    nbepochs = 100
 
     # 2. model
 
@@ -87,9 +94,10 @@ def main():
         model=model,
         optimizer=optimizer,
         iter_train=iter_train,
+        iter_train_nocrop=iter_train_nocrop,
         iter_valid=iter_valid,
         out=out,
-        max_iter=100000,
+        max_iter=train_samples*nbepochs,
     )
     trainer.train()
 
