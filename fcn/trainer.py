@@ -57,13 +57,14 @@ class Trainer(object):
         self.model = model
         self.optimizer = optimizer
         self.iter_train = iter_train
+        self.iter_train_noncrop = iter_train_noncrop
         self.iter_valid = iter_valid
         self.out = out
         self.epoch = 0
         self.iteration = 0
         self.max_iter = max_iter
         self.interval_validate = interval_validate
-        self.interval_validate = len(self.iter_train)
+        # self.interval_validate = len(self.iter_train.dataset)
         self.stamp_start = None
         # for logging
         self.log_headers = [
@@ -112,6 +113,7 @@ class Trainer(object):
         for batch in tqdm.tqdm(iter_valid, desc=desc, total=len(dataset),
                                ncols=80, leave=False):
             img, lbl_true = zip(*batch)
+            #print(img[0].shape, lbl_true[0].shape)
             batch = map(datasets.transform_lsvrc2012_vgg16, batch)
             with chainer.no_backprop_mode(), \
                     chainer.using_config('train', False):
@@ -138,30 +140,37 @@ class Trainer(object):
             viz = utils.get_tile_image(vizs)
             skimage.io.imsave(out_viz, viz)
         
+        del dataset
         # Train set without cropping
-        iter_train_nocrop = copy.copy(self.iter_train_noncrop)
+        iter_train_noncrop = copy.copy(self.iter_train_noncrop)
+        dataset = iter_train_noncrop.dataset
+        # print(len(dataset))
         desc = 'train_nocrop [iteration=%08d]' % self.iteration
         losses_train, lbl_trues_train, lbl_preds_train = [], [], []
-        for batch in tqdm.tqdm(iter_train_nocrop, desc=desc, total=len(dataset),
+        for batch in tqdm.tqdm(iter_train_noncrop, desc=desc, total=len(dataset),
                                ncols=80, leave=False):
             img_train, lbl_true_train = zip(*batch)
+            # print(img_train[0].shape, lbl_true_train[0].shape)
             batch = map(datasets.transform_lsvrc2012_vgg16, batch)
             with chainer.no_backprop_mode(), \
                     chainer.using_config('train', False):
                 in_vars = utils.batch_to_vars(batch, device=self.device)
                 loss_train = self.model(*in_vars)
-            losses_train.append(float(loss.data))
+            losses_train.append(float(loss_train.data))
             score = self.model.score
-            lbl_pred = chainer.functions.argmax(score, axis=1)
-            lbl_pred = chainer.cuda.to_cpu(lbl_pred.data)
-            for im, lt, lp in zip(img, lbl_true, lbl_pred):
+            lbl_pred_train = chainer.functions.argmax(score, axis=1)
+            lbl_pred_train = chainer.cuda.to_cpu(lbl_pred_train.data)
+            for im, lt, lp in zip(img_train, lbl_true_train, lbl_pred_train):
                 lbl_trues_train.append(lt)
                 lbl_preds_train.append(lp)
+        
+        del dataset
         # generate log
         acc = utils.label_accuracy_score(
             lbl_trues, lbl_preds, self.model.n_class)
-        acc_train = utils.labels_accuracy_score(
+        acc_train = utils.label_accuracy_score(
             lbl_trues_train, lbl_preds_train, self.model.n_class)
+        print('Writing logs...')
         self._write_log(**{
             'epoch': self.epoch,
             'iteration': self.iteration,
@@ -178,6 +187,7 @@ class Trainer(object):
             'train_total/fwavacc': acc_train[3]
         })
         if self.iteration % 3000 == 0:
+            print('Model saved')
             self._save_model()
 
     def _write_log(self, **kwargs):

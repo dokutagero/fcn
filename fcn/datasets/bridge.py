@@ -7,11 +7,11 @@ from PIL import Image
 import scipy.io
 from .. import data
 
-DATASET_BRIDGE_DIR = osp.expanduser('~/repos/bridgedegradationseg/dataset/')
+DATASET_BRIDGE_DIR = osp.expanduser('/root/fcn/bridgedegradationseg/dataset/')
 
 class BridgeSegBase(chainer.dataset.DatasetMixin):
 
-    class_names = np.array(['non-damage', 'damage'])
+    class_names = np.array(['non-damage', 'delamination', 'rebar_exposure'])
 
     def __init__(self, split='train'):
         self.split = split
@@ -21,8 +21,8 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
             imgsets_file = osp.join(DATASET_BRIDGE_DIR, "{}.txt".format(split))
             for did in open(imgsets_file):
                 did = did.strip()
-                img_file = osp.join(DATASET_BRIDGE_DIR, 'images/combined/', '{}.jpg'.format(did))
-                lbl_file = osp.join(DATASET_BRIDGE_DIR, 'bridge_masks/combined/', '{}.png'.format(did))
+                img_file = osp.join(DATASET_BRIDGE_DIR, 'bridge_dataset/', '{}.jpg'.format(did))
+                lbl_file = osp.join(DATASET_BRIDGE_DIR, 'bridge_masks/', '{}.png'.format(did))
                 self.files[split].append({
                     'img' : img_file,
                     'lbl' : lbl_file,
@@ -44,7 +44,7 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
 
         img = np.array(img, dtype=np.uint8)
         lbl = np.array(lbl, dtype=np.uint32)
-        lbl = (lbl/255).astype(np.int32)
+        lbl = self.color_class_label(lbl)
         if self.rcrop.any() != None:
             img,lbl = self.random_crop(img,lbl, self.rcrop)
         return img, lbl
@@ -53,16 +53,30 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         w, h = x.shape[1], x.shape[0]
         rangew = (w - random_crop_size[0]) // 2
         rangeh = (h - random_crop_size[1]) // 2
-        print(x.shape)
-        print(y.shape)
         offsetw = 0 if rangew==0 else np.random.randint(rangew)
         offseth = 0 if rangeh==0 else np.random.randint(rangeh)
         if y.any() != None:
-            print(y.shape)
             return x[offseth:offseth+random_crop_size[0], offsetw:offsetw+random_crop_size[1]], \
                     y[offseth:offseth+random_crop_size[0], offsetw:offsetw+random_crop_size[1]]
         else:
             return x[:, offseth:offseth+random_crop_size[0], offsetw:offsetw+random_crop_size[1]]
+
+    def color_class_label(self, image):
+        # https://stackoverflow.com/a/33196320
+        color_codes = {
+            (0, 0, 0): 0,
+            (255, 255, 0): 1,
+            (255, 0, 0): 2
+        }
+        
+        color_map = np.ndarray(shape=(256*256*256), dtype='int32')
+        color_map[:] = -1
+        for rgb, idx in color_codes.items():
+            rgb = rgb[0] * 65536 + rgb[1] * 256 + rgb[2]
+            color_map[rgb] = idx
+        
+        image = image.dot(np.array([65536, 256, 1], dtype='int32'))
+        return color_map[image]
         
 
 class BridgeSeg(BridgeSegBase):
