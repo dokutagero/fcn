@@ -14,8 +14,12 @@ class FCN16s(chainer.Chain):
     pretrained_model = osp.expanduser(
         '~/data/models/chainer/fcn16s_from_caffe.npz')
 
-    def __init__(self, n_class=21):
+    def __init__(self, n_class=21, class_weight=None):
         self.n_class = n_class
+        if class_weight is not None:
+            assert class_weight.shape == (self.n_class,)
+            self.class_weight = class_weight
+
         kwargs = {
             'initialW': chainer.initializers.Zero(),
             'initial_bias': chainer.initializers.Zero(),
@@ -139,7 +143,7 @@ class FCN16s(chainer.Chain):
             assert not chainer.configuration.config.train
             return
 
-        loss = F.softmax_cross_entropy(self.score, t, normalize=False)
+        loss = F.softmax_cross_entropy(self.score, t, normalize=False, class_weight=self.class_weight)
         if np.isnan(float(loss.data)):
             raise ValueError('Loss value is nan.')
         return loss

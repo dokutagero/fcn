@@ -65,11 +65,12 @@ def main():
     # 2. model
 
     n_class = len(dataset_train.class_names)
+    class_weight = dataset_train.class_weight
 
-    fcn32s = fcn.models.FCN32s(n_class=n_class)
+    fcn32s = fcn.models.FCN32s(n_class=n_class, class_weight=class_weight)
     chainer.serializers.load_npz(fcn32s_file, fcn32s)
 
-    model = fcn.models.FCN16s(n_class=n_class)
+    model = fcn.models.FCN16s(n_class=n_class, class_weight=class_weight)
     model.init_from_fcn32s(fcn32s)
 
     if gpu >= 0:

@@ -13,6 +13,8 @@ DATASET_BRIDGE_DIR = osp.expanduser('/root/fcn/bridgedegradationseg/dataset/')
 class BridgeSegBase(chainer.dataset.DatasetMixin):
 
     class_names = np.array(['non-damage', 'delamination', 'rebar_exposure'])
+    #TODO: figure out proper weights
+    class_weight = np.array([0.5, 2.0, 4.0]) #the weights will be multiplied with the loss value
 
     def __init__(self, split='train', black_out_non_deck=False):
         self.split = split

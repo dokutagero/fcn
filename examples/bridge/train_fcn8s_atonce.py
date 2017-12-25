@@ -48,11 +48,12 @@ def main():
     # 2. model
 
     n_class = len(dataset_train.class_names)
+    class_weight = dataset_train.class_weight
 
     vgg = fcn.models.VGG16()
     chainer.serializers.load_npz(vgg.pretrained_model, vgg)
 
-    model = fcn.models.FCN8sAtOnce(n_class=n_class)
+    model = fcn.models.FCN8sAtOnce(n_class=n_class, class_weight=class_weight)
     model.init_from_vgg16(vgg)
 
     if gpu >= 0:
