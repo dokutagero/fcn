@@ -19,9 +19,14 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
     def __init__(self, split='train', black_out_non_deck=False, use_class_weight=False):
         self.split = split
         self.black_out_non_deck = black_out_non_deck
+        if black_out_non_deck:
+            self.class_names = np.array(['non-damage', 'delamination', 'rebar_exposure', 'non-deck'])
+
         self.files = collections.defaultdict(list)
         if use_class_weight:
             self.class_weight = class_weight_default
+            if black_out_non_deck:
+                self.class_weight = np.append(self.class_weight, 0.0)
         else:
             self.class_weight = None
 
@@ -63,7 +68,7 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
             deck_file = data_file['deck']
             deck = Image.open(deck_file)
             deck = np.array(deck, dtype=np.uint32)
-            img = self.black_out_non_deck_fn(img, deck)
+            img, lbl = self.black_out_non_deck_fn(img, lbl, deck)
 
         if self.rcrop.any() != None:
             img,lbl = self.random_crop(img,lbl, self.rcrop)
@@ -99,14 +104,16 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         return color_map[image]
 
 
-    def black_out_non_deck_fn(self, img, deck):
+    def black_out_non_deck_fn(self, img, lbl, deck):
     	assert deck.shape[0:2] == img.shape[0:2]
     	assert img.shape[2] == 3
     	assert len(deck.shape) == 2
+        assert lbl.shape == deck.shape
     	deck = deck/255  #so that deck is 1 or 0
+        lbl[deck==0] = -1  #make everything none deck as class -1
     	deck = np.repeat(deck[:,:,np.newaxis], 3, axis=2)  #duplicate deck into the 3rd dimension
     	img = img * deck.astype('uint8') 
-    	return img
+    	return img, lbl
 
         
 
