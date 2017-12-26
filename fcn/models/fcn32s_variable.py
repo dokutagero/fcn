@@ -19,6 +19,8 @@ class FCN32s(chainer.Chain):
         if class_weight is not None:
             assert class_weight.shape == (self.n_class,)
             self.class_weight = class_weight
+        else:
+            self.class_weight = None
 
         kwargs = {
             'initialW': chainer.initializers.Zero(),
