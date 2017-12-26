@@ -8,14 +8,15 @@ import scipy.io
 from .. import data
 
 DATASET_BRIDGE_DIR = osp.expanduser('/root/fcn/bridgedegradationseg/dataset/')
+#DATASET_BRIDGE_DIR = osp.expanduser('~/repos/bridgedegradationseg/dataset/')
 
 class BridgeSegBase(chainer.dataset.DatasetMixin):
 
     class_names = np.array(['non-damage', 'delamination', 'rebar_exposure'])
 
-    def __init__(self, split='train'):
+    def __init__(self, split='train', black_out_non_deck=False):
         self.split = split
-
+        self.black_out_non_deck = black_out_non_deck
         self.files = collections.defaultdict(list)
         for split in ['train', 'validation']:
             imgsets_file = osp.join(DATASET_BRIDGE_DIR, "{}.txt".format(split))
@@ -23,9 +24,14 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
                 did = did.strip()
                 img_file = osp.join(DATASET_BRIDGE_DIR, 'bridge_dataset/', '{}.jpg'.format(did))
                 lbl_file = osp.join(DATASET_BRIDGE_DIR, 'bridge_masks/', '{}.png'.format(did))
+                deck_file = ''
+                if self.black_out_non_deck:
+                    deck_file = osp.join(DATASET_BRIDGE_DIR, 'deck_masks/', '{}.png'.format(did))
+
                 self.files[split].append({
                     'img' : img_file,
                     'lbl' : lbl_file,
+                    'deck' : deck_file,
                 })
 
     def __len__(self):
@@ -45,6 +51,13 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         img = np.array(img, dtype=np.uint8)
         lbl = np.array(lbl, dtype=np.uint32)
         lbl = self.color_class_label(lbl)
+
+        if self.black_out_non_deck:
+            deck_file = data_file['deck']
+            deck = Image.open(deck_file)
+            deck = np.array(deck, dtype=np.uint32)
+            img = self.black_out_non_deck_fn(img, deck)
+
         if self.rcrop.any() != None:
             img,lbl = self.random_crop(img,lbl, self.rcrop)
         return img, lbl
@@ -77,11 +90,22 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         
         image = image.dot(np.array([65536, 256, 1], dtype='int32'))
         return color_map[image]
+
+
+    def black_out_non_deck_fn(self, img, deck):
+    	assert deck.shape[0:2] == img.shape[0:2]
+    	assert img.shape[2] == 3
+    	assert len(deck.shape) == 2
+    	deck = deck/255  #so that deck is 1 or 0
+    	deck = np.repeat(deck[:,:,np.newaxis], 3, axis=2)  #duplicate deck into the 3rd dimension
+    	img = img * deck.astype('uint8') 
+    	return img
+
         
 
 class BridgeSeg(BridgeSegBase):
-    def __init__(self, split='train', rcrop=[None, None]):
-       super(BridgeSeg, self).__init__(split=split) 
+    def __init__(self, split='train', rcrop=[None, None], black_out_non_deck=False):
+       super(BridgeSeg, self).__init__(split=split, black_out_non_deck=black_out_non_deck) 
        if len(rcrop) == 2:
            self.rcrop = np.array(rcrop)
        else:
