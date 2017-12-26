@@ -219,6 +219,7 @@ class Trainer(object):
     def _write_log(self, filename, **kwargs):
         log = collections.defaultdict(str)
         log.update(kwargs)
+        filename = '{}_{}'.format(self.fold, filename)
         with open(osp.join(self.out, filename), 'a') as f:
             f.write(','.join(str(log[h]) for h in self.log_headers) + '\n')
 
