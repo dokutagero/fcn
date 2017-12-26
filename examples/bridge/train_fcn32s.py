@@ -36,12 +36,13 @@ def main():
     out = osp.join(here, 'logs', out)
 
     # 1. dataset
-    # TODO
-    # log fold
-    dataset = datasets.BridgeSeg(split='all', rcrop=[400,400])
+    dataset = datasets.BridgeSeg(split='all', rcrop=[400,400], use_class_weight=False)
     dataset_cv = chainer.datasets.get_cross_validation_datasets_random(dataset, 10, 42)
-    dataset_nocrop = datasets.BridgeSeg(split='all')
+    dataset_nocrop = datasets.BridgeSeg(split='all', use_class_weight=False)
     dataset_nocrop_cv = chainer.datasets.get_cross_validation_datasets_random(dataset_nocrop, 10, 42)
+
+    if dataset_train.class_weight is not None:
+        print("Using class weigths: ", dataset_train.class_weight)
 
     for fold, (train_fold, test_fold) in enumerate(dataset_cv):
         (train_fold_nocrop, test_fold_nocrop) = dataset_nocrop_cv[fold]
@@ -61,7 +62,6 @@ def main():
     
         n_class = len(dataset.class_names)
         class_weight = dataset_train.class_weight
-
     
         vgg = fcn.models.VGG16()
         chainer.serializers.load_npz(vgg.pretrained_model, vgg)

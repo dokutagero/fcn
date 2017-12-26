@@ -14,12 +14,17 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
 
     class_names = np.array(['non-damage', 'delamination', 'rebar_exposure'])
     #TODO: figure out proper weights
-    class_weight = np.array([0.5, 2.0, 4.0]) #the weights will be multiplied with the loss value
+    class_weight_default = np.array([0.5, 2.0, 4.0]) #the weights will be multiplied with the loss value
 
-    def __init__(self, split='train', black_out_non_deck=False):
+    def __init__(self, split='train', black_out_non_deck=False, use_class_weight=False):
         self.split = split
         self.black_out_non_deck = black_out_non_deck
         self.files = collections.defaultdict(list)
+        if use_class_weight:
+            self.class_weight = class_weight_default
+        else:
+            self.class_weight = None
+
         for split in ['train', 'validation', 'all']:
             imgsets_file = osp.join(DATASET_BRIDGE_DIR, "{}.txt".format(split))
             for did in open(imgsets_file):
@@ -106,8 +111,8 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         
 
 class BridgeSeg(BridgeSegBase):
-    def __init__(self, split='train', rcrop=[None, None], black_out_non_deck=False):
-       super(BridgeSeg, self).__init__(split=split, black_out_non_deck=black_out_non_deck) 
+    def __init__(self, split='train', rcrop=[None, None], black_out_non_deck=False, use_class_weight=False):
+       super(BridgeSeg, self).__init__(split=split, black_out_non_deck=black_out_non_deck, use_class_weight=use_class_weight) 
        if len(rcrop) == 2:
            self.rcrop = np.array(rcrop)
        else:
