@@ -9,7 +9,6 @@ RUN apt-get update -y && \
     python-wheel
 
 RUN pip install cupy==4.0.0b1 chainer==4.0.0b1
-RUN pip install fcn
 
 # OpenCV
 RUN apt-get install -y \
@@ -57,7 +56,5 @@ RUN wget https://github.com/opencv/opencv/archive/3.2.0.zip \
 && make install \
 && rm /3.2.0.zip \
 && rm -r /opencv-3.2.0
-
-RUN ln -s /root/fcn/fcn/external /usr/local/lib/python2.7/dist-packages/fcn/
 
 WORKDIR /root

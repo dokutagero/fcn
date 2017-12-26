@@ -45,13 +45,14 @@ def infer(n_class):
         os.makedirs(args.out_dir)
 
     for file in args.img_files:
+        print(file)
         # input
-        img = skimage.io.imread(file)
-        mask_path = '/home/dokutagero/repos/bridgedegradationseg/dataset/bridge_masks/combined2/'
+        img = skimage.io.imread(file, img_num=0)
+        mask_path = '/root/fcn/bridgedegradationseg/dataset/bridge_masks/{}/'.format(file.split('/')[-2])
         mask_name = file.split('/')[-1].split('.')[0] + '.png'
-        print mask_name
         mask = skimage.io.imread(mask_path + mask_name)
-        mask = mask / 255
+        # mask = mask / 255
+        mask = color_class_label(mask)
         input, = fcn.datasets.transform_lsvrc2012_vgg16((img,))
         input = input[np.newaxis, :, :, :]
         if args.gpu >= 0:
@@ -66,13 +67,30 @@ def infer(n_class):
                 lbl_pred = chainer.cuda.to_cpu(lbl_pred.data)
 
         # visualize
-        viz = fcn.utils.visualize_segmentation(
-            lbl_true=mask, lbl_pred=lbl_pred, img=img, n_class=n_class,
-            label_names=fcn.datasets.BridgeSeg.class_names)
+        # viz = fcn.utils.visualize_segmentation(
+        #      lbl_pred=lbl_pred, img=img, n_class=n_class,
+        #     label_names=fcn.datasets.BridgeSeg.class_names)
         out_file = osp.join(args.out_dir, osp.basename(file))
-        skimage.io.imsave(out_file, viz)
+        skimage.io.imsave('/root/fcn/fcn/1316.png', lbl_pred)
         print('==> wrote to: %s' % out_file)
+
+def color_class_label(image):
+    # https://stackoverflow.com/a/33196320
+    color_codes = {
+        (0, 0, 0): 0,
+        (255, 255, 0): 1,
+        (255, 0, 0): 2
+    }
+
+    color_map = np.ndarray(shape=(256*256*256), dtype='int32')
+    color_map[:] = -1
+    for rgb, idx in color_codes.items():
+        rgb = rgb[0] * 65536 + rgb[1] * 256 + rgb[2]
+        color_map[rgb] = idx
+
+    image = image.dot(np.array([65536, 256, 1], dtype='int32'))
+    return color_map[image]
 
 
 if __name__ == '__main__':
-    infer(n_class=2)
+    infer(n_class=3)

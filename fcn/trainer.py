@@ -62,12 +62,14 @@ class Trainer(object):
         self.out = out
         self.epoch = 0
         self.iteration = 0
+        self.fold = 0
         self.max_iter = max_iter
         self.interval_validate = interval_validate
         # self.interval_validate = len(self.iter_train.dataset)
         self.stamp_start = None
         # for logging
         self.log_headers = [
+            'fold',
             'epoch',
             'iteration',
             'elapsed_time',
@@ -81,10 +83,14 @@ class Trainer(object):
             'train_total/acc_cls',
             'train_total/mean_iu',
             'train_total/fwavacc',
+            'train_total/iu_cls',
+            'train_total/confusion_matrix',
             'valid/loss',
             'valid/acc',
             'valid/acc_cls',
             'valid/mean_iu',
+            'valid/iu_cls',
+            'valid/confusion_matrix',
             'valid/fwavacc',
         ]
         if not osp.exists(self.out):
@@ -171,7 +177,8 @@ class Trainer(object):
         acc_train = utils.label_accuracy_score(
             lbl_trues_train, lbl_preds_train, self.model.n_class)
         print('Writing logs...')
-        self._write_log(**{
+        self._write_log('log.csv', **{
+            'fold': self.fold,
             'epoch': self.epoch,
             'iteration': self.iteration,
             'elapsed_time': time.time() - self.stamp_start,
@@ -184,16 +191,35 @@ class Trainer(object):
             'train_total/acc': acc_train[0],
             'train_total/acc_cls': acc_train[1],
             'train_total/mean_iu': acc_train[2],
-            'train_total/fwavacc': acc_train[3]
+            'train_total/fwavacc': acc_train[3],
+        })
+        self._write_log('iu_cls.csv', **{
+            'fold': self.fold,
+            'epoch': self.epoch,
+            'iteration': self.iteration,
+            'valid/iu_cls': acc[4],
+            'train_total/iu_cls': acc_train[4],
+        })
+        self._write_log('train_total_confusion_matrix.csv', **{
+            'fold': self.fold,
+            'epoch': self.epoch,
+            'iteration': self.iteration,
+            'train_total/confusion_matrix': acc_train[5]
+        })
+        self._write_log('valid_confusion_matrix.csv', **{
+            'fold': self.fold,
+            'epoch': self.epoch,
+            'iteration': self.iteration,
+            'valid/confusion_matrix': acc[5]
         })
         if self.iteration % 3000 == 0:
             print('Model saved')
             self._save_model()
 
-    def _write_log(self, **kwargs):
+    def _write_log(self, filename, **kwargs):
         log = collections.defaultdict(str)
         log.update(kwargs)
-        with open(osp.join(self.out, 'log.csv'), 'a') as f:
+        with open(osp.join(self.out, filename), 'a') as f:
             f.write(','.join(str(log[h]) for h in self.log_headers) + '\n')
 
     def _save_model(self):
@@ -205,7 +231,7 @@ class Trainer(object):
                              (model_name, self.iteration))
         chainer.serializers.save_npz(out_model, self.model)
 
-    def train(self):
+    def train(self, fold):
         """Train the network using the training dataset.
 
         Parameters
@@ -222,6 +248,7 @@ class Trainer(object):
                                           ncols=80):
             self.epoch = self.iter_train.epoch
             self.iteration = iteration
+            self.fold = fold
 
             ############
             # validate #
@@ -249,7 +276,8 @@ class Trainer(object):
                 lbl_pred = chainer.cuda.to_cpu(lbl_pred.data)
                 acc = utils.label_accuracy_score(
                     lbl_true, lbl_pred, self.model.n_class)
-                self._write_log(**{
+                self._write_log('log.csv', **{
+                    'fold': self.fold,
                     'epoch': self.epoch,
                     'iteration': self.iteration,
                     'elapsed_time': time.time() - self.stamp_start,
