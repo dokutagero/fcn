@@ -45,9 +45,12 @@ def main():
 
     # 1. dataset
 
-    dataset_train = datasets.BridgeSeg(split='train', rcrop=[400,400])
-    dataset_train_nocrop = datasets.BridgeSeg(split='train')
-    dataset_valid = datasets.BridgeSeg(split='validation')
+    dataset_train = datasets.BridgeSeg(split='train', rcrop=[400,400], use_class_weight=False)
+    dataset_train_nocrop = datasets.BridgeSeg(split='train', use_class_weight=False)
+    dataset_valid = datasets.BridgeSeg(split='validation', use_class_weight=False)
+
+    if dataset_train.class_weight is not None:
+        print("Using class weigths: ", dataset_train.class_weight)
 
     iter_train = chainer.iterators.MultiprocessIterator(
         dataset_train, batch_size=1, shared_mem=10 ** 7)
@@ -64,11 +67,12 @@ def main():
     # 2. model
 
     n_class = len(dataset_train.class_names)
+    class_weight = dataset_train.class_weight
 
-    fcn16s = fcn.models.FCN16s(n_class=n_class)
+    fcn16s = fcn.models.FCN16s(n_class=n_class, class_weight=class_weight)
     chainer.serializers.load_npz(fcn16s_file, fcn16s)
 
-    model = fcn.models.FCN8s(n_class=n_class)
+    model = fcn.models.FCN8s(n_class=n_class, class_weight=class_weight)
     model.init_from_fcn16s(fcn16s)
 
     if gpu >= 0:
