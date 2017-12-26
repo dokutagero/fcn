@@ -18,7 +18,7 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         self.split = split
         self.black_out_non_deck = black_out_non_deck
         self.files = collections.defaultdict(list)
-        for split in ['train', 'validation']:
+        for split in ['train', 'validation', 'all']:
             imgsets_file = osp.join(DATASET_BRIDGE_DIR, "{}.txt".format(split))
             for did in open(imgsets_file):
                 did = did.strip()
