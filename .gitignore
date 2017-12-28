@@ -8,3 +8,4 @@ dist/
 .cache/
 
 logs/
+.ipynb_checkpoints/

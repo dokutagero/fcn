@@ -36,7 +36,6 @@ def main():
     out = osp.join(here, 'logs', out)
 
     # 1. dataset
-    dataset = datasets.BridgeSeg(split='all', rcrop=[400,400], use_class_weight=False)
     dataset_cv = chainer.datasets.get_cross_validation_datasets_random(dataset, 10, 42)
     dataset_nocrop = datasets.BridgeSeg(split='all', use_class_weight=False)
     dataset_nocrop_cv = chainer.datasets.get_cross_validation_datasets_random(dataset_nocrop, 10, 42)
@@ -44,15 +43,17 @@ def main():
     if dataset_train.class_weight is not None:
         print("Using class weigths: ", dataset_train.class_weight)
 
-    for fold, (train_fold, test_fold) in enumerate(dataset_cv):
-        (train_fold_nocrop, test_fold_nocrop) = dataset_nocrop_cv[fold]
+    for deck_flag in [True, False]:
+        train_dataset = datasets.BridgeSeg(split='train', rcrop=[400,400], use_class_weight=False, black_out_non_deck=deck_flag)
+        train_dataset_nocrop = datasets.BridgeSeg(split='train',  use_class_weight=False, black_out_non_deck=deck_flag)
+        test_dataset = datasets.BridgeSeg(split='validation', use_class_weight=False, black_out_non_deck=deck_flag)
         iter_train = chainer.iterators.MultiprocessIterator(
-            train_fold, batch_size=1, shared_mem=10 ** 7)
+            train_dataset, batch_size=1, shared_mem=10 ** 7)
         iter_train_nocrop = chainer.iterators.MultiprocessIterator(
-            train_fold_nocrop, batch_size=1, shared_mem=10 ** 7,
+            train_dataset_nocrop, batch_size=1, shared_mem=10 ** 7,
             repeat=False, shuffle=False)
         iter_valid = chainer.iterators.MultiprocessIterator(
-            test_fold, batch_size=1, shared_mem=10 ** 7,
+            test_dataset, batch_size=1, shared_mem=10 ** 7,
             repeat=False, shuffle=False)
     
         train_samples = len(train_fold)
