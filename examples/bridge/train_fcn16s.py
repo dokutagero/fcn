@@ -44,31 +44,30 @@ def main():
         f.write('fcn32s_file: %s\n' % fcn32s_file)
 
     # 1. dataset
+    deck_flag = False
+    train_dataset = datasets.BridgeSeg(split='train', rcrop=[400,400], use_class_weight=False, black_out_non_deck=deck_flag)
+    train_dataset_nocrop = datasets.BridgeSeg(split='train',  use_class_weight=False, black_out_non_deck=deck_flag)
+    test_dataset = datasets.BridgeSeg(split='validation', use_class_weight=False, black_out_non_deck=deck_flag)
 
-    dataset_train = datasets.BridgeSeg(split='train', rcrop=[400,400], use_class_weight=False)
-    dataset_train_nocrop = datasets.BridgeSeg(split='train', use_class_weight=False)
-    dataset_valid = datasets.BridgeSeg(split='validation', use_class_weight=False)
-
-    if dataset_train.class_weight is not None:
-        print("Using class weigths: ", dataset_train.class_weight)
+    # if dataset_train.class_weight is not None:
+    #     print("Using class weigths: ", dataset_train.class_weight)
 
     iter_train = chainer.iterators.MultiprocessIterator(
-        dataset_train, batch_size=1, shared_mem=10 ** 7)
-    iter_valid = chainer.iterators.MultiprocessIterator(
-        dataset_valid, batch_size=1, shared_mem=10 ** 7,
-        repeat=False, shuffle=False)
+        train_dataset, batch_size=1, shared_mem=10 ** 8)
     iter_train_nocrop = chainer.iterators.MultiprocessIterator(
-        dataset_train_nocrop, batch_size=1, shared_mem=10 ** 7,
+        train_dataset_nocrop, batch_size=1, shared_mem=10 ** 8,
+        repeat=False, shuffle=False)
+    iter_valid = chainer.iterators.MultiprocessIterator(
+        test_dataset, batch_size=1, shared_mem=10 ** 8,
         repeat=False, shuffle=False)
 
-    train_samples = len(dataset_train)
-    print(train_samples)
+    train_samples = len(train_dataset)
     nbepochs = 100
 
     # 2. model
 
-    n_class = len(dataset_train.class_names)
-    class_weight = dataset_train.class_weight
+    n_class = len(train_dataset.class_names)
+    class_weight = train_dataset.class_weight
 
     fcn32s = fcn.models.FCN32s(n_class=n_class, class_weight=class_weight)
     chainer.serializers.load_npz(fcn32s_file, fcn32s)
@@ -105,7 +104,7 @@ def main():
         max_iter=train_samples*nbepochs,
         interval_validate=train_samples,
     )
-    trainer.train()
+    trainer.train(fold=0)
 
 
 if __name__ == '__main__':

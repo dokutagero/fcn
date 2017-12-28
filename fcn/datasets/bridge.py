@@ -1,10 +1,11 @@
-import collections
-import os.path as osp
-
 import chainer
+import collections
 import numpy as np
-from PIL import Image
+import os.path as osp
+import piexif
 import scipy.io
+
+from PIL import Image
 from .. import data
 
 DATASET_BRIDGE_DIR = osp.expanduser('/root/fcn/bridgedegradationseg/dataset/')
@@ -52,6 +53,7 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
     def get_example(self, index):
         data_file = self.files[self.split][index]
         img_file = data_file['img']
+        piexif.remove(img_file)
         img = Image.open(img_file)
         # wsize = int(float(img.size[0]) * 0.5)
         # hsize = int(float(img.size[1]) * 0.5)

@@ -1,0 +1,1 @@
+fold,epoch,iteration,elapsed_time,train/loss,train/acc,train/acc_cls,train/mean_iu,train/fwavacc,train_total/loss,train_total/acc,train_total/acc_cls,train_total/mean_iu,train_total/fwavacc,train_total/iu_cls,train_total/confusion_matrix,valid/loss,valid/acc,valid/acc_cls,valid/mean_iu,valid/iu_cls,valid/confusion_matrix,valid/fwavacc

@@ -4,6 +4,7 @@ numpy
 scipy
 matplotlib
 pandas
+piexif
 scikit-learn
 scikit-image
 chainer>=2.0.0

@@ -138,13 +138,13 @@ class Trainer(object):
                         img=im, n_class=self.model.n_class)
                     vizs.append(viz)
         # save visualization
-        if self.iteration % 500 == 0:
-            out_viz = osp.join(self.out, 'visualizations_valid',
-                               'iter%08d.jpg' % self.iteration)
-            if not osp.exists(osp.dirname(out_viz)):
-                os.makedirs(osp.dirname(out_viz))
-            viz = utils.get_tile_image(vizs)
-            skimage.io.imsave(out_viz, viz)
+        # if self.iteration % 500 == 0:
+        #     out_viz = osp.join(self.out, 'visualizations_valid',
+        #                        'iter%08d.jpg' % self.iteration)
+        #     if not osp.exists(osp.dirname(out_viz)):
+        #         os.makedirs(osp.dirname(out_viz))
+        #     viz = utils.get_tile_image(vizs)
+        #     skimage.io.imsave(out_viz, viz)
         
         del dataset
         # Train set without cropping
@@ -212,13 +212,14 @@ class Trainer(object):
             'iteration': self.iteration,
             'valid/confusion_matrix': acc[5]
         })
-        if self.iteration % 3000 == 0:
-            print('Model saved')
-            self._save_model()
+        # if self.epoch >= 90:
+        #     print('Model saved')
+        #     self._save_model()
 
     def _write_log(self, filename, **kwargs):
         log = collections.defaultdict(str)
         log.update(kwargs)
+        filename = '{}_{}'.format(self.fold, filename)
         with open(osp.join(self.out, filename), 'a') as f:
             f.write(','.join(str(log[h]) for h in self.log_headers) + '\n')
 
@@ -254,9 +255,16 @@ class Trainer(object):
             # validate #
             ############
 
-            if self.interval_validate and \
-                    self.iteration % self.interval_validate == 0:
+            # if self.interval_validate and \
+            #         self.iteration % self.interval_validate == 0:
+            #     self.validate()
+
+            if self.epoch % 10 == 0 and self.iteration % self.interval_validate == 0 and self.epoch > 0:
                 self.validate()
+    
+            if self.epoch >= 90 and self.iteration % self.interval_validate == 0 and self.epoch > 0:
+	        self._save_model()
+
 
             #########
             # train #
