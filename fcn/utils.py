@@ -9,9 +9,12 @@ except ImportError:
     cv2 = None
 
 import numpy as np
+import piexif
 import scipy.ndimage
 import six
 import skimage.color
+
+from PIL import Image, ImageDraw, ImageFont
 
 
 # -----------------------------------------------------------------------------
@@ -196,7 +199,7 @@ def get_tile_image(imgs, tile_shape=None, result_img=None, margin_color=None):
         y_num = int(math.sqrt(img_num))
         while x_num * y_num < img_num:
             x_num += 1
-        return x_num, y_num
+        return y_num, x_num
 
     if tile_shape is None:
         tile_shape = get_tile_shape(len(imgs))
@@ -240,6 +243,10 @@ def label2rgb(lbl, img=None, label_names=None, n_labels=None,
     lbl_viz[lbl == -1] = (0, 0, 0)  # unlabeled
 
     if img is not None:
+        print("From label2rgb")
+        print(type(img))
+        print(img.shape)
+        print(len(img.shape))
         img_gray = skimage.color.rgb2gray(img)
         img_gray = skimage.color.gray2rgb(img_gray)
         img_gray *= 255
@@ -315,6 +322,12 @@ def visualize_segmentation(**kwargs):
         Visualized image.
     """
     img = kwargs.pop('img', None)
+    filename = img
+    piexif.remove(filename)
+    img = skimage.io.imread(img, img_num=0)
+    print("Inside infer in utils")
+    print(img.shape)
+    print(len(img.shape))
     lbl_true = kwargs.pop('lbl_true', None)
     lbl_pred = kwargs.pop('lbl_pred', None)
     n_class = kwargs.pop('n_class', None)
@@ -350,9 +363,31 @@ def visualize_segmentation(**kwargs):
         viz_trues[2][mask_unlabeled] = viz_unlabeled[mask_unlabeled]
         vizs.append(get_tile_image(viz_trues, (1, 3)))
 
+    blank = np.zeros(img.shape).astype('uint8')
+    blank.fill(255)
+    blank_img = Image.fromarray(blank, "RGB")
+    W, H = blank_img.size
+    acc, acc_cls, mean_iu, fwavacc, ius, _  = label_accuracy_score(lbl_true, lbl_pred, n_class)
+    msg = "Filename: {}\n" .format(filename.split('/')[-1].split('.')[0])
+    msg = msg + "Damange Level: {}\n" .format(filename.split('/')[-2])
+    if len(label_names) == 4:
+        disp_label_names = label_names[:-1]
+        disp_ius = ius[:-1]
+    else:
+        disp_label_names = label_names
+        disp_ius = ius
+    for label, iu in zip(disp_label_names, disp_ius):
+        msg = msg + "IoU of {}: {}\n".format(label, iu)
+    draw = ImageDraw.Draw(blank_img)
+    w, h = draw.textsize(msg)
+    fontsize = 26
+    font = ImageFont.truetype("/root/teera/Arial.ttf", fontsize)
+    draw.text(((W-w)/2-100, (H-h)/2), msg, fill="black", font=font)
+    blank_im = np.array(blank_img)
+
     if lbl_pred is not None:
         viz_preds = [
-            img,
+            blank_im,
             label2rgb(lbl_pred, label_names=label_names, n_labels=n_class),
             label2rgb(lbl_pred, img, label_names=label_names,
                       n_labels=n_class),

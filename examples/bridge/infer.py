@@ -12,13 +12,14 @@ import skimage.io
 import fcn
 
 
-def infer(n_class):
+def infer():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-g', '--gpu', default=0, type=int, help='GPU id')
     parser.add_argument('-m', '--model-file')
     parser.add_argument('-i', '--img-files', nargs='+', required=True)
     parser.add_argument('-o', '--out-dir', required=True)
+    parser.add_argument('-nc', '--n-class', required=True, type=int)
     args = parser.parse_args()
 
     # model
@@ -30,6 +31,7 @@ def infer(n_class):
     if match is None:
         print('Unsupported model filename: %s' % args.model_file)
         quit(1)
+    n_class = args.n_class
     model_name = 'FCN%ss' % match.groups()[0]
     model_class = getattr(fcn.models, model_name)
     model = model_class(n_class=n_class)
@@ -48,7 +50,7 @@ def infer(n_class):
         print(file)
         # input
         img = skimage.io.imread(file, img_num=0)
-        mask_path = '/root/fcn/bridgedegradationseg/dataset/bridge_masks/{}/'.format(file.split('/')[-2])
+        mask_path = '/root/teera/bridge_masks/{}/'.format(file.split('/')[-2])
         mask_name = file.split('/')[-1].split('.')[0] + '.png'
         mask = skimage.io.imread(mask_path + mask_name)
         # mask = mask / 255
@@ -67,11 +69,16 @@ def infer(n_class):
                 lbl_pred = chainer.cuda.to_cpu(lbl_pred.data)
 
         # visualize
-        # viz = fcn.utils.visualize_segmentation(
-        #      lbl_pred=lbl_pred, img=img, n_class=n_class,
-        #     label_names=fcn.datasets.BridgeSeg.class_names)
+        if n_class == 4:
+            viz = fcn.utils.visualize_segmentation(
+                lbl_true=mask, lbl_pred=lbl_pred, img=file, n_class=n_class,
+                label_names=np.append(fcn.datasets.BridgeSeg.class_names, ['non-deck']))
+        else:
+            viz = fcn.utils.visualize_segmentation(
+                lbl_true=mask, lbl_pred=lbl_pred, img=file, n_class=n_class,
+                label_names=fcn.datasets.BridgeSeg.class_names)
         out_file = osp.join(args.out_dir, osp.basename(file))
-        skimage.io.imsave('/root/fcn/fcn/1316.png', lbl_pred)
+        skimage.io.imsave(out_file, viz)
         print('==> wrote to: %s' % out_file)
 
 def color_class_label(image):
@@ -93,4 +100,4 @@ def color_class_label(image):
 
 
 if __name__ == '__main__':
-    infer(n_class=3)
+    infer()
