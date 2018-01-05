@@ -14,8 +14,7 @@ DATASET_BRIDGE_DIR = osp.expanduser('/root/fcn/bridgedegradationseg/dataset/')
 class BridgeSegBase(chainer.dataset.DatasetMixin):
 
     class_names = np.array(['non-damage', 'delamination', 'rebar_exposure'])
-    #TODO: figure out proper weights
-    class_weight_default = np.array([0.5, 2.0, 4.0]) #the weights will be multiplied with the loss value
+    class_weight_default = np.array([0.3610441, 4.6313269, 69.76223605]) #the weights will be multiplied with the loss value
 
     def __init__(self, split='train', black_out_non_deck=False, use_class_weight=False):
         self.split = split
@@ -107,15 +106,15 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
 
 
     def black_out_non_deck_fn(self, img, lbl, deck):
-    	assert deck.shape[0:2] == img.shape[0:2]
-    	assert img.shape[2] == 3
-    	assert len(deck.shape) == 2
+        assert deck.shape[0:2] == img.shape[0:2]
+        assert img.shape[2] == 3
+        assert len(deck.shape) == 2
         assert lbl.shape == deck.shape
-    	deck = deck/255  #so that deck is 1 or 0
+        deck = deck/255  #so that deck is 1 or 0
         lbl[deck==0] = -1  #make everything none deck as class -1
-    	deck = np.repeat(deck[:,:,np.newaxis], 3, axis=2)  #duplicate deck into the 3rd dimension
-    	img = img * deck.astype('uint8') 
-    	return img, lbl
+        deck = np.repeat(deck[:,:,np.newaxis], 3, axis=2)  #duplicate deck into the 3rd dimension
+        img = img * deck.astype('uint8') 
+        return img, lbl
 
         
 

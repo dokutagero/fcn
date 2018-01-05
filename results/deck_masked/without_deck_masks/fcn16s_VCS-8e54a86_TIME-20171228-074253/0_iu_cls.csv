@@ -1,3 +1,4 @@
+fold,epoch,iteration,elapsed_time,train/loss,train/acc,train/acc_cls,train/mean_iu,train/fwavacc,train_total/loss,train_total/acc,train_total/acc_cls,train_total/mean_iu,train_total/fwavacc,train_total/iu_cls,train_total/confusion_matrix,valid/loss,valid/acc,valid/acc_cls,valid/mean_iu,valid/iu_cls,valid/confusion_matrix,valid/fwavacc
 0,10,2960,,,,,,,,,,,,[ 0.97470052  0.65047033  0.48648135],,,,,,[ 0.95105234  0.35720433  0.3022959 ],,
 0,20,5920,,,,,,,,,,,,[ 0.9757508   0.65652745  0.48968534],,,,,,[ 0.95238914  0.35590231  0.31819141],,
 0,30,8880,,,,,,,,,,,,[ 0.9764721   0.66215225  0.50009629],,,,,,[ 0.95372024  0.35605775  0.32154414],,
