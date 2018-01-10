@@ -19,7 +19,7 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
     class_names = np.array(['non-damage', 'delamination', 'rebar_exposure'])
     class_weight_default = np.array([0.3610441, 4.6313269, 69.76223605]) #the weights will be multiplied with the loss value
 
-    def __init__(self, split='train', use_data_augmentation=True, black_out_non_deck=False, use_class_weight=False):
+    def __init__(self, split='train', use_data_augmentation=False, black_out_non_deck=False, use_class_weight=False):
         self.split = split
         self.black_out_non_deck = black_out_non_deck
         self.use_data_augmentation = use_data_augmentation
@@ -165,7 +165,8 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         
 
 class BridgeSeg(BridgeSegBase):
-    def __init__(self, split='train', rcrop=[None, None], use_data_augmentation=True, black_out_non_deck=False, use_class_weight=False):
+    def __init__(self, split='train', rcrop=[None, None], use_data_augmentation=False, black_out_non_deck=False, use_class_weight=False):
+
        super(BridgeSeg, self).__init__(split=split, use_data_augmentation=use_data_augmentation, black_out_non_deck=black_out_non_deck, use_class_weight=use_class_weight) 
        if len(rcrop) == 2:
            self.rcrop = np.array(rcrop)
