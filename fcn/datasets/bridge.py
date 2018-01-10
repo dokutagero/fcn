@@ -11,8 +11,8 @@ from imgaug import augmenters as iaa
 from PIL import Image
 from .. import data
 
-DATASET_BRIDGE_DIR = osp.expanduser('/root/fcn/bridgedegradationseg/dataset/')
-#DATASET_BRIDGE_DIR = osp.expanduser('~/repos/bridgedegradationseg/dataset/')
+#DATASET_BRIDGE_DIR = osp.expanduser('/root/fcn/bridgedegradationseg/dataset/')
+DATASET_BRIDGE_DIR = osp.expanduser('~/repos/bridgedegradationseg/dataset/')
 
 class BridgeSegBase(chainer.dataset.DatasetMixin):
 
@@ -166,6 +166,7 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
 
 class BridgeSeg(BridgeSegBase):
     def __init__(self, split='train', rcrop=[None, None], use_data_augmentation=False, black_out_non_deck=False, use_class_weight=False):
+
        super(BridgeSeg, self).__init__(split=split, use_data_augmentation=use_data_augmentation, black_out_non_deck=black_out_non_deck, use_class_weight=use_class_weight) 
        if len(rcrop) == 2:
            self.rcrop = np.array(rcrop)
