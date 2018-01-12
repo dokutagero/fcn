@@ -270,7 +270,7 @@ class Trainer(object):
             # train #
             #########
 
-            batch = map(datasets.transform_bridge, batch)
+            batch = map(datasets.transform_bridge_vgg16, batch)
             in_vars = utils.batch_to_vars(batch, device=self.device)
             self.model.zerograds()
             loss = self.model(*in_vars)

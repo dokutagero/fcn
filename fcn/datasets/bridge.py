@@ -4,6 +4,7 @@ import numpy as np
 import os.path as osp
 import piexif
 import scipy.io
+import cv2
 
 import imgaug as ia
 from imgaug import augmenters as iaa
@@ -19,10 +20,11 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
     class_names = np.array(['non-damage', 'delamination', 'rebar_exposure'])
     class_weight_default = np.array([0.3610441, 4.6313269, 69.76223605]) #the weights will be multiplied with the loss value
 
-    def __init__(self, split='train', use_data_augmentation=False, black_out_non_deck=False, use_class_weight=False):
+    def __init__(self, split='train', use_data_augmentation=False, black_out_non_deck=False, use_class_weight=False, preprocess=False):
         self.split = split
         self.black_out_non_deck = black_out_non_deck
         self.use_data_augmentation = use_data_augmentation
+        self.preprocess = preprocess
         #if black_out_non_deck or use_data_augmentation:
             #see below with the class weights
             #self.class_names = np.array(['non-damage', 'delamination', 'rebar_exposure', 'non-deck'])
@@ -91,6 +93,10 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         img = np.array(img, dtype=np.uint8)
         lbl = np.array(lbl, dtype=np.uint32)
         lbl = self.color_class_label(lbl)
+
+        #important: keep this BEFORE black_out_non_deck, as the histogram spreading sometimes causes the black area not to be fully black anymore
+        if self.preprocess:
+            img = self.preprocess_fn(img)
 
         if self.black_out_non_deck:
             deck_file = data_file['deck']
@@ -162,12 +168,35 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
 
         return img, lbl
 
+    def preprocess_fn(self, img):
+
+        img = self.dynamic_histogram_spreading(img)
+
+        return img
+
+    def dynamic_histogram_spreading(self, img, clipLim = 1.0, gridSize = 32):   
+        #convert PIL image to cv image in lab colorspace
+        lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB)
+        #from stackoverflow https://stackoverflow.com/questions/24341114/simple-illumination-correction-in-images-opencv-c/39744436#39744436
+        #-----Converting image to LAB Color model----------------------------------- 
+        #lab = cv2.cvtColor(cvimg, cv2.COLOR_BGR2LAB)
+        #-----Splitting the LAB image to different channels-------------------------
+        l, a, b = cv2.split(lab)
+        #-----Applying CLAHE to L-channel-------------------------------------------
+        clahe = cv2.createCLAHE(clipLimit=clipLim, tileGridSize=(gridSize, gridSize))
+        cl = clahe.apply(l)
+        #-----Merge the CLAHE enhanced L-channel with the a and b channel-----------
+        limg = cv2.merge((cl,a,b))
+        #-----Converting image from LAB Color model to RGB model--------------------
+        cvfinal = cv2.cvtColor(limg, cv2.COLOR_LAB2RGB)       
+        return cvfinal
+
         
 
 class BridgeSeg(BridgeSegBase):
-    def __init__(self, split='train', rcrop=[None, None], use_data_augmentation=False, black_out_non_deck=False, use_class_weight=False):
+    def __init__(self, split='train', rcrop=[None, None], use_data_augmentation=False, black_out_non_deck=False, use_class_weight=False, preprocess=False):
 
-       super(BridgeSeg, self).__init__(split=split, use_data_augmentation=use_data_augmentation, black_out_non_deck=black_out_non_deck, use_class_weight=use_class_weight) 
+       super(BridgeSeg, self).__init__(split=split, use_data_augmentation=use_data_augmentation, black_out_non_deck=black_out_non_deck, use_class_weight=use_class_weight, preprocess=preprocess) 
        if len(rcrop) == 2:
            self.rcrop = np.array(rcrop)
        else:
