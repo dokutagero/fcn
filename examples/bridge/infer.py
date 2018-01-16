@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import pandas as pd
 import argparse
 import os
 import os.path as osp
@@ -10,6 +11,7 @@ import numpy as np
 import skimage.io
 
 import fcn
+from fcn.utils import label_accuracy_score
 
 
 def infer():
@@ -46,6 +48,14 @@ def infer():
     if not osp.exists(args.out_dir):
         os.makedirs(args.out_dir)
 
+    iu_per_img = np.zeros((1,3))
+    if n_class == 4:
+        label_names = np.append(fcn.datasets.BridgeSeg.class_names, ['non-deck'])
+    else:
+        label_names = fcn.datasets.BridgeSeg.class_names
+
+    
+    df_list = []
     for file in args.img_files:
         print(file)
         # input
@@ -68,18 +78,30 @@ def infer():
                 lbl_pred = chainer.functions.argmax(model.score, axis=1)[0]
                 lbl_pred = chainer.cuda.to_cpu(lbl_pred.data)
 
+
         # visualize
-        if n_class == 4:
-            viz = fcn.utils.visualize_segmentation(
-                lbl_true=mask, lbl_pred=lbl_pred, img=file, n_class=n_class,
-                label_names=np.append(fcn.datasets.BridgeSeg.class_names, ['non-deck']))
-        else:
-            viz = fcn.utils.visualize_segmentation(
-                lbl_true=mask, lbl_pred=lbl_pred, img=file, n_class=n_class,
-                label_names=fcn.datasets.BridgeSeg.class_names)
+        viz = fcn.utils.visualize_segmentation(
+            lbl_true=mask, lbl_pred=lbl_pred, img=file, n_class=n_class,
+            label_names=label_names)
+
+        damage_level = file.split('/')[-2]
+
+        img_name = filename.split('/')[-1]
+        # Compute per image scores
+        acc = label_accuracy_score(mask, lbl_pred, n_class)
+        # csv_df[label_names] = acc[4] 
+        df_list.append([img_name, damage_level].extend(acc[4]))
+        
         out_file = osp.join(args.out_dir, osp.basename(file))
         skimage.io.imsave(out_file, viz)
         print('==> wrote to: %s' % out_file)
+
+
+    csv_df = pd.DataFrame.from_records(data=df_list, columns=['img_name', 'damage_level'].extend(label_names))
+    csv_df.to_csv('infer.csv')
+
+
+
 
 def color_class_label(image):
     # https://stackoverflow.com/a/33196320
