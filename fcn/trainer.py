@@ -53,6 +53,7 @@ class Trainer(object):
             out,
             max_iter,
             interval_validate=500):
+        self.mean_iu = 0
         self.device = device
         self.model = model
         self.optimizer = optimizer
@@ -174,6 +175,12 @@ class Trainer(object):
         # generate log
         acc = utils.label_accuracy_score(
             lbl_trues, lbl_preds, self.model.n_class)
+        new_mean_iu = np.mean(acc[4][1:])
+        print('\nnew_mean_iu: {}'.format(new_mean_iu))
+        print('old_mean_iu: {}'.format(self.mean_iu))
+        if new_mean_iu > self.mean_iu:
+            self._save_model()
+        self.mean_iu = np.max(np.mean(acc[4][1:]), self.mean_iu)
         acc_train = utils.label_accuracy_score(
             lbl_trues_train, lbl_preds_train, self.model.n_class)
         print('Writing logs...')
@@ -259,11 +266,11 @@ class Trainer(object):
             #         self.iteration % self.interval_validate == 0:
             #     self.validate()
 
-            if self.epoch % 10 == 0 and self.iteration % self.interval_validate == 0 and self.epoch > 0:
+            if self.iteration % self.interval_validate == 0 and self.epoch > 0:
                 self.validate()
     
-            if self.epoch >= 90 and self.iteration % self.interval_validate == 0 and self.epoch > 0:
-	        self._save_model()
+            # if self.epoch >= 100 and self.epoch <= 120 and self.iteration % self.interval_validate == 0 and self.epoch > 0:
+	    #     self._save_model()
 
 
             #########

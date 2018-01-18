@@ -7,4 +7,5 @@ pandas
 piexif
 scikit-learn
 scikit-image
+imgaug
 chainer>=2.0.0

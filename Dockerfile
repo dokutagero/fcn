@@ -6,9 +6,14 @@ RUN apt-get update -y && \
     python-dev \
     python-pip \
     python-setuptools \
-    python-wheel
+    python-wheel \
+    git
 
-RUN pip install cupy==4.0.0b1 chainer==4.0.0b1
+RUN pip install -U pip
+RUN pip install Cython
+RUN pip install git+https://github.com/cupy/cupy.git
+RUN pip install git+https://github.com/chainer/chainer.git
+RUN pip install gdown tqdm scipy matplotlib pandas piexif scikit-learn scikit-image imgaug
 
 # OpenCV
 RUN apt-get install -y \

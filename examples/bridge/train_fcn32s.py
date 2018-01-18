@@ -36,10 +36,27 @@ def main():
     out = osp.join(here, 'logs', out)
 
     # 1. dataset
-    deck_flag = False
-    train_dataset = datasets.BridgeSeg(split='train', rcrop=[400,400], use_class_weight=False, black_out_non_deck=deck_flag)
-    train_dataset_nocrop = datasets.BridgeSeg(split='train',  use_class_weight=False, black_out_non_deck=deck_flag)
-    test_dataset = datasets.BridgeSeg(split='validation', use_class_weight=False, black_out_non_deck=deck_flag)
+    deck_flag = True
+    class_weight_flag = False
+    train_dataset = datasets.BridgeSeg(
+        split='train',
+        rcrop=[512,512],
+        use_class_weight=class_weight_flag,
+        black_out_non_deck=deck_flag,
+        use_data_augmentation=True
+    )
+    train_dataset_nocrop = datasets.BridgeSeg(
+        split='train',
+        use_class_weight=class_weight_flag,
+        black_out_non_deck=deck_flag,
+        use_data_augmentation=False
+    )
+    test_dataset = datasets.BridgeSeg(
+        split='validation',
+        use_class_weight=class_weight_flag,
+        black_out_non_deck=deck_flag,
+        use_data_augmentation=False
+    )
 
     iter_train = chainer.iterators.MultiprocessIterator(
         train_dataset, batch_size=1, shared_mem=10 ** 8)
@@ -51,7 +68,7 @@ def main():
         repeat=False, shuffle=False)
 
     train_samples = len(train_dataset)
-    nbepochs = 100
+    nbepochs = 338
 
     # 2. model
 

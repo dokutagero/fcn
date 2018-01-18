@@ -9,7 +9,7 @@ except ImportError:
     cv2 = None
 
 import numpy as np
-import piexif
+# import piexif
 import scipy.ndimage
 import six
 import skimage.color
@@ -323,7 +323,7 @@ def visualize_segmentation(**kwargs):
     """
     img = kwargs.pop('img', None)
     filename = img
-    piexif.remove(filename)
+    # piexif.remove(filename)
     img = skimage.io.imread(img, img_num=0)
     print("Inside infer in utils")
     print(img.shape)
@@ -381,7 +381,7 @@ def visualize_segmentation(**kwargs):
     draw = ImageDraw.Draw(blank_img)
     w, h = draw.textsize(msg)
     fontsize = 26
-    font = ImageFont.truetype("/root/teera/Arial.ttf", fontsize)
+    font = ImageFont.truetype("/root/fcn/Roboto-Regular.ttf", fontsize)
     draw.text(((W-w)/2-100, (H-h)/2), msg, fill="black", font=font)
     blank_im = np.array(blank_img)
 

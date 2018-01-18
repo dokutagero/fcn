@@ -44,7 +44,7 @@ def main():
         f.write('fcn32s_file: %s\n' % fcn32s_file)
 
     # 1. dataset
-    deck_flag = False
+    deck_flag = True
     train_dataset = datasets.BridgeSeg(split='train', rcrop=[400,400], use_class_weight=False, black_out_non_deck=deck_flag)
     train_dataset_nocrop = datasets.BridgeSeg(split='train',  use_class_weight=False, black_out_non_deck=deck_flag)
     test_dataset = datasets.BridgeSeg(split='validation', use_class_weight=False, black_out_non_deck=deck_flag)

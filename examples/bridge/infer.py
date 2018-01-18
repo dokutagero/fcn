@@ -62,12 +62,12 @@ def infer():
         print(file)
         # input
         img = skimage.io.imread(file, img_num=0)
-        mask_path = '/root/teera/bridge_masks/{}/'.format(file.split('/')[-2])
+        mask_path = '/root/fcn/bridgedegradationseg/dataset/bridge_masks/{}/'.format(file.split('/')[-2])
         mask_name = file.split('/')[-1].split('.')[0] + '.png'
         mask = skimage.io.imread(mask_path + mask_name)
         # mask = mask / 255
         mask = color_class_label(mask)
-        input, = fcn.datasets.transform_lsvrc2012_vgg16((img,))
+        input, = fcn.datasets.transform_bridge_vgg16((img,))
         input = input[np.newaxis, :, :, :]
         if args.gpu >= 0:
             input = chainer.cuda.to_gpu(input)
