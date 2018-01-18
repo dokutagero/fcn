@@ -2,7 +2,6 @@ import numpy as np
 
 
 def transform_lsvrc2012_vgg16(inputs):
-    assert False #we shouldnt use this function anymore, instead use the one below with our mean
     img = inputs[0]
 
     # LSVRC2012 used by VGG16

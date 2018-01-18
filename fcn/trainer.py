@@ -120,7 +120,7 @@ class Trainer(object):
                                ncols=80, leave=False):
             img, lbl_true = zip(*batch)
             #print(img[0].shape, lbl_true[0].shape)
-            batch = map(datasets.transform_bridge_vgg16, batch)
+            batch = map(datasets.transform_lsvrc2012_vgg16, batch)
             with chainer.no_backprop_mode(), \
                     chainer.using_config('train', False):
                 in_vars = utils.batch_to_vars(batch, device=self.device)
@@ -157,7 +157,7 @@ class Trainer(object):
                                ncols=80, leave=False):
             img_train, lbl_true_train = zip(*batch)
             # print(img_train[0].shape, lbl_true_train[0].shape)
-            batch = map(datasets.transform_bridge_vgg16, batch)
+            batch = map(datasets.transform_lsvrc2012_vgg16, batch)
             with chainer.no_backprop_mode(), \
                     chainer.using_config('train', False):
                 in_vars = utils.batch_to_vars(batch, device=self.device)
@@ -270,7 +270,7 @@ class Trainer(object):
             # train #
             #########
 
-            batch = map(datasets.transform_bridge, batch)
+            batch = map(datasets.transform_lsvrc2012_vgg16, batch)
             in_vars = utils.batch_to_vars(batch, device=self.device)
             self.model.zerograds()
             loss = self.model(*in_vars)
