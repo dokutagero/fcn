@@ -56,6 +56,8 @@ def infer():
 
     
     df_list = []
+    header = ['img_name', 'damage_level']
+    header.extend(label_names)
     for file in args.img_files:
         print(file)
         # input
@@ -86,21 +88,21 @@ def infer():
 
         damage_level = file.split('/')[-2]
 
-        img_name = filename.split('/')[-1]
+        img_name = file.split('/')[-1]
         # Compute per image scores
         acc = label_accuracy_score(mask, lbl_pred, n_class)
         # csv_df[label_names] = acc[4] 
-        df_list.append([img_name, damage_level].extend(acc[4]))
+        row = [img_name, damage_level]
+        row.extend(acc[4].tolist())
+        df_list.append(row)
         
         out_file = osp.join(args.out_dir, osp.basename(file))
         skimage.io.imsave(out_file, viz)
         print('==> wrote to: %s' % out_file)
 
 
-    csv_df = pd.DataFrame.from_records(data=df_list, columns=['img_name', 'damage_level'].extend(label_names))
-    csv_df.to_csv('infer.csv')
-
-
+    csv_df = pd.DataFrame.from_records(data=df_list, columns=header)
+    csv_df.to_csv('infer.csv', index_label='id')
 
 
 def color_class_label(image):
