@@ -6,3 +6,4 @@ from .fcn16s import FCN16s
 from .fcn32s import FCN32s
 from .vgg16 import VGG16
 from .fcn32s_variable import FCN32s as FCN32s_variable
+from .resnetfcn import ResNetLayersFCN
