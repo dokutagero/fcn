@@ -11,8 +11,8 @@ from imgaug import augmenters as iaa
 from PIL import Image
 from .. import data
 
-#DATASET_BRIDGE_DIR = osp.expanduser('/root/fcn/bridgedegradationseg/dataset/')
 DATASET_BRIDGE_DIR = osp.expanduser('/root/fcn/bridgedegradationseg/dataset/')
+# DATASET_BRIDGE_DIR = osp.expanduser('/home/dokutagero/repos/dataset_bridge/')
 
 class BridgeSegBase(chainer.dataset.DatasetMixin):
 
@@ -57,7 +57,7 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
             self.hooks_lbl = ia.HooksImages(activator=activator_lbl)
 
         self.files = collections.defaultdict(list)
-        for split in ['train', 'validation', 'all']:
+        for split in ['train', 'validation']:
             imgsets_file = osp.join(DATASET_BRIDGE_DIR, "{}.txt".format(split))
             for did in open(imgsets_file):
                 did = did.strip()
