@@ -20,7 +20,15 @@ def main():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-g', '--gpu', type=int, required=True, help='GPU id')
+    parser.add_argument('-da', '--data-augmentation', type=int, \
+                        default=0, choices=(0,1),
+                        help='Data augmentation flag. Default 0, 1 for data augmentation')
+    parser.add_argument('-d', '--deck-mask', type=int, default=1, choices=(0,1),\
+                        help='Applying deck mask. Default 1, 0 for not masking deck')
+    parser.add_argument('-e', '--epochs', type=int, default=100, choices=range(1000), \
+                        help='Number of epochs')
     args = parser.parse_args()
+
 
     gpu = args.gpu
 
@@ -36,14 +44,15 @@ def main():
     out = osp.join(here, 'logs', out)
 
     # 1. dataset
-    deck_flag = True
+    deck_flag = bool(args.deck_mask) 
+    data_augmentation = bool(args.data_augmentation)
     class_weight_flag = False
     train_dataset = datasets.BridgeSeg(
         split='train',
         rcrop=[512,512],
         use_class_weight=class_weight_flag,
         black_out_non_deck=deck_flag,
-        use_data_augmentation=True
+        use_data_augmentation=data_augmentation
     )
     train_dataset_nocrop = datasets.BridgeSeg(
         split='train',
@@ -58,6 +67,7 @@ def main():
         use_data_augmentation=False
     )
 
+
     iter_train = chainer.iterators.MultiprocessIterator(
         train_dataset, batch_size=1, shared_mem=10 ** 8)
     iter_train_nocrop = chainer.iterators.MultiprocessIterator(
@@ -68,7 +78,7 @@ def main():
         repeat=False, shuffle=False)
 
     train_samples = len(train_dataset)
-    nbepochs = 338
+    nbepochs = args.epochs
 
     # 2. model
 
