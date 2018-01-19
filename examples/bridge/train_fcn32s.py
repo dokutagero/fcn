@@ -26,7 +26,7 @@ def main():
     parser.add_argument('-d', '--deck-mask', type=int, default=1, choices=(0,1),\
                         help='Applying deck mask. Default 1, 0 for not masking deck')
     parser.add_argument('-e', '--epochs', type=int, default=100, choices=range(1000), \
-                        help='Number of epochs')
+                        help='Number of epochs', metavar='range(0...1000)')
     args = parser.parse_args()
 
 
