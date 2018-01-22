@@ -286,6 +286,7 @@ class Trainer(object):
                 loss.backward()
                 self.optimizer.update()
 
+                """
                 lbl_true = zip(*batch)[1]
                 lbl_pred = chainer.functions.argmax(self.model.score, axis=1)
                 lbl_pred = chainer.cuda.to_cpu(lbl_pred.data)
@@ -302,6 +303,7 @@ class Trainer(object):
                     'train/mean_iu': acc[2],
                     'train/fwavacc': acc[3],
                 })
+                """
 
             if iteration >= self.max_iter:
                 # self._save_model()
