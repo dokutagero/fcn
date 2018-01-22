@@ -33,7 +33,6 @@ def main():
     gpu = args.gpu
 
     # 0. config
-
     cmd = 'git log -n1 --format="%h"'
     vcs_version = subprocess.check_output(cmd, shell=True).strip()
     timestamp = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
