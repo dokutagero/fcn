@@ -180,7 +180,7 @@ class Trainer(object):
         print('old_mean_iu: {}'.format(self.mean_iu))
         if new_mean_iu > self.mean_iu:
             self._save_model()
-        self.mean_iu = np.max(np.mean(acc[4][1:]), self.mean_iu)
+        self.mean_iu = np.maximum(np.mean(acc[4][1:]), self.mean_iu)
         acc_train = utils.label_accuracy_score(
             lbl_trues_train, lbl_preds_train, self.model.n_class)
         print('Writing logs...')
@@ -304,5 +304,5 @@ class Trainer(object):
                 })
 
             if iteration >= self.max_iter:
-                self._save_model()
+                # self._save_model()
                 break
