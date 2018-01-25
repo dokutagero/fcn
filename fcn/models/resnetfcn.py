@@ -42,7 +42,7 @@ from chainer.links.model.vision.resnet import ResNetLayers
 class ResNetLayersFCN32(link.Chain):
 
 
-    def __init__(self, pretrained_model, n_layers, n_class=2, class_weight=None):
+    def __init__(self, pretrained_model, n_layers, n_class, class_weight=None):
         super(ResNetLayersFCN32, self).__init__()
         self.n_class = n_class
         if class_weight is not None:
@@ -134,7 +134,28 @@ class ResNetLayersFCN32(link.Chain):
             if key == 'upscore':  #last layer
                 lastlayerout = h
 
-        lastlayerout = lastlayerout[:, :, 19:19 + x.data.shape[2], 19:19 + x.data.shape[3]]
+        #lastlayerout = lastlayerout[:, :, 19:19 + x.data.shape[2], 19:19 + x.data.shape[3]]
+        print("Just FYI: In dimensions: {}  Out dimensions:  {}".format(x.data.shape, lastlayerout.data.shape))   
+
+        if lastlayerout.data.shape[2] >= x.data.shape[2] and lastlayerout.data.shape[3] >= x.data.shape[3]:
+            xoffset = int((lastlayerout.data.shape[2] - x.data.shape[2]) / 2)
+            yoffset = int((lastlayerout.data.shape[3] - x.data.shape[3]) / 2)
+            lastlayerout = lastlayerout[:, :, xoffset:xoffset + x.data.shape[2], yoffset:yoffset + x.data.shape[3]]
+        elif lastlayerout.data.shape[2] < x.data.shape[2] and lastlayerout.data.shape[3] < x.data.shape[3]:
+            print("Network output is smaller than original image. Padding with zeros. In dimensions: {}  Out dimensions:  {}".format(x.data.shape, lastlayerout.data.shape))
+            tmp = np.zeros(x.data.shape)
+            xoffset = int((x.data.shape[2] - lastlayerout.data.shape[2]) / 2)
+            yoffset = int((y.data.shape[2] - lastlayerout.data.shape[3]) / 2)
+            tmp[:lastlayerout.shape[0],:lastlayerout.shape[1],xoffset:xoffset+lastlayerout.shape[2],yoffset:yoffset+lastlayerout.shape[3]] = lastlayerout.data
+            lastlayerout.data = tmp
+        else:
+            print("Some weird input/output shape constellation. Not implementet yet because hopefully not needed. Setting output to all 0 in the correct shape to avoid a crash. If this message ever shows up, we should implement a solution. In dimensions: {}  Out dimensions:  {}".format(x.data.shape, lastlayerout.data.shape))
+            lastlayerout = np.zeros(x.data.shape)
+
+        if lastlayerout.data.shape != x.data.shape:
+            print("Ok, this should not be happeing, even after cropping we have a dimension mismatch. In dimensions: {}  Out dimensions:  {}".format(x.data.shape, lastlayerout.data.shape))   
+
+
         self.score = lastlayerout
 
         if t is None:
@@ -150,7 +171,7 @@ class ResNetLayersFCN32(link.Chain):
 
 class ResNet50LayersFCN32(ResNetLayersFCN32):
 
-    def __init__(self, pretrained_model='auto', n_class=2, class_weight=None):
+    def __init__(self, pretrained_model='auto', n_class=3, class_weight=None):
         if pretrained_model == 'auto':
             pretrained_model = 'ResNet-50-model.caffemodel'
         super(ResNet50LayersFCN32, self).__init__(pretrained_model, 50, n_class=n_class, class_weight=class_weight)
@@ -158,7 +179,7 @@ class ResNet50LayersFCN32(ResNetLayersFCN32):
 
 class ResNet101LayersFCN32(ResNetLayersFCN32):
 
-    def __init__(self, pretrained_model='auto', n_class=2, class_weight=None):
+    def __init__(self, pretrained_model='auto', n_class=3, class_weight=None):
         if pretrained_model == 'auto':
             pretrained_model = 'ResNet-101-model.caffemodel'
         super(ResNet101LayersFCN32, self).__init__(pretrained_model, 101, n_class=n_class, class_weight=class_weight)
@@ -166,7 +187,7 @@ class ResNet101LayersFCN32(ResNetLayersFCN32):
 
 class ResNet152LayersFCN32(ResNetLayersFCN32):
 
-    def __init__(self, pretrained_model='auto', n_class=2, class_weight=None):
+    def __init__(self, pretrained_model='auto', n_class=3, class_weight=None):
         if pretrained_model == 'auto':
             pretrained_model = 'ResNet-152-model.caffemodel'
         super(ResNet152LayersFCN32, self).__init__(pretrained_model, 152, n_class=n_class, class_weight=class_weight)

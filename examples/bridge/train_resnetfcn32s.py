@@ -94,7 +94,7 @@ def main():
     # 3. optimizer
 
     #optimizer = chainer.optimizers.MomentumSGD(lr=1.0e-10, momentum=0.99)  
-    optimizer = chainer.optimizers.MomentumSGD(lr=1.0e-10, momentum=0.9)
+    optimizer = chainer.optimizers.MomentumSGD(lr=1.0e-4, momentum=0.9)
     optimizer.setup(model)
     #optimizer.add_hook(chainer.optimizer.WeightDecay(rate=0.0005))
     optimizer.add_hook(chainer.optimizer.WeightDecay(rate=0.0001)) 

@@ -12,6 +12,7 @@ import tqdm
 
 from . import datasets
 from . import utils
+from .models import ResNet101LayersFCN32
 
 
 class Trainer(object):
@@ -121,7 +122,11 @@ class Trainer(object):
                                ncols=80, leave=False):
             img, lbl_true = zip(*batch)
             #print(img[0].shape, lbl_true[0].shape)
-            batch = map(datasets.transform_lsvrc2012_vgg16, batch)
+            if type(self.model) == ResNet101LayersFCN32:
+                batch = map(datasets.transform_default_resnet, batch)
+            else:
+                batch = map(datasets.transform_lsvrc2012_vgg16, batch)
+
             with chainer.no_backprop_mode(), \
                     chainer.using_config('train', False):
                 in_vars = utils.batch_to_vars(batch, device=self.device)
@@ -158,7 +163,11 @@ class Trainer(object):
                                ncols=80, leave=False):
             img_train, lbl_true_train = zip(*batch)
             # print(img_train[0].shape, lbl_true_train[0].shape)
-            batch = map(datasets.transform_lsvrc2012_vgg16, batch)
+            if type(self.model) == ResNet101LayersFCN32:
+                batch = map(datasets.transform_default_resnet, batch)
+            else:
+                batch = map(datasets.transform_lsvrc2012_vgg16, batch)
+
             with chainer.no_backprop_mode(), \
                     chainer.using_config('train', False):
                 in_vars = utils.batch_to_vars(batch, device=self.device)
@@ -250,6 +259,10 @@ class Trainer(object):
         -------
         None
         """
+
+        learning_rate_last_updated_for_epoch = 0
+        update_learning_rate_epoch_intervall = 20
+
         self.stamp_start = time.time()
         for iteration, batch in tqdm.tqdm(enumerate(self.iter_train),
                                           desc='train', total=self.max_iter,
@@ -277,7 +290,16 @@ class Trainer(object):
             # train #
             #########
 
-            batch = map(datasets.transform_lsvrc2012_vgg16, batch)
+            if self.epoch > learning_rate_last_updated_for_epoch + update_learning_rate_epoch_intervall and type(self.model) == ResNet101LayersFCN32:
+                 self.optimizer.lr *= 0.1
+                 print('Update learning rate to {}'.format(self.optimizer.lr))
+                 learning_rate_last_updated_for_epoch = self.epoch
+
+            if type(self.model) == ResNet101LayersFCN32:
+                batch = map(datasets.transform_default_resnet, batch)
+            else:
+                batch = map(datasets.transform_lsvrc2012_vgg16, batch)
+
             in_vars = utils.batch_to_vars(batch, device=self.device)
             self.model.zerograds()
             loss = self.model(*in_vars)
