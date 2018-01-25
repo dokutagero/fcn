@@ -9,3 +9,6 @@ dist/
 
 logs/
 .ipynb_checkpoints/
+
+examples/bridge/infer_web/uploads
+.ideas
