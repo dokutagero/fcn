@@ -1,9 +1,12 @@
+chainer>=2.0.0
+chainercv
 gdown
 tqdm
 numpy
 scipy
 matplotlib
 pandas
+<<<<<<< HEAD
 piexif
 scikit-learn
 scikit-image

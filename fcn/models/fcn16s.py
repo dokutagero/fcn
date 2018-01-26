@@ -124,8 +124,8 @@ class FCN16s(chainer.Chain):
 
         # score_pool4c
         h = score_pool4[:, :,
-                        5:5 + upscore2.data.shape[2],
-                        5:5 + upscore2.data.shape[3]]
+                        5:5 + upscore2.shape[2],
+                        5:5 + upscore2.shape[3]]
         score_pool4c = h  # 1/16
 
         # fuse_pool4
@@ -137,7 +137,7 @@ class FCN16s(chainer.Chain):
         upscore16 = h  # 1/1
 
         # score
-        h = upscore16[:, :, 27:27 + x.data.shape[2], 27:27 + x.data.shape[3]]
+        h = upscore16[:, :, 27:27 + x.shape[2], 27:27 + x.shape[3]]
         score = h  # 1/1
         self.score = score
 
@@ -148,6 +148,7 @@ class FCN16s(chainer.Chain):
         loss = F.softmax_cross_entropy(self.score, t, normalize=False, class_weight=self.class_weight)
         if np.isnan(float(loss.data)):
             raise ValueError('Loss value is nan.')
+        chainer.report({'loss': loss}, self)
         return loss
 
     def init_from_fcn32s(self, fcn32s):
@@ -169,3 +170,15 @@ class FCN16s(chainer.Chain):
             path=cls.pretrained_model,
             md5='7c9b50a1a8c6c20d3855d4823bbea61e',
         )
+
+    def predict(self, imgs):
+        lbls = []
+        for img in imgs:
+            with chainer.no_backprop_mode(), \
+                    chainer.using_config('train', False):
+                x = self.xp.asarray(img[None])
+                self.__call__(x)
+                lbl = chainer.functions.argmax(self.score, axis=1)
+            lbl = chainer.cuda.to_cpu(lbl.array[0])
+            lbls.append(lbl)
+        return lbls

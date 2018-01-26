@@ -133,8 +133,8 @@ class FCN8s(chainer.Chain):
 
         # score_pool4c
         h = score_pool4[:, :,
-                        5:5 + upscore2.data.shape[2],
-                        5:5 + upscore2.data.shape[3]]
+                        5:5 + upscore2.shape[2],
+                        5:5 + upscore2.shape[3]]
         score_pool4c = h  # 1/16
 
         # fuse_pool4
@@ -147,8 +147,8 @@ class FCN8s(chainer.Chain):
 
         # score_pool4c
         h = score_pool3[:, :,
-                        9:9 + upscore_pool4.data.shape[2],
-                        9:9 + upscore_pool4.data.shape[3]]
+                        9:9 + upscore_pool4.shape[2],
+                        9:9 + upscore_pool4.shape[3]]
         score_pool3c = h  # 1/8
 
         # fuse_pool3
@@ -160,7 +160,7 @@ class FCN8s(chainer.Chain):
         upscore8 = h  # 1/1
 
         # score
-        h = upscore8[:, :, 31:31 + x.data.shape[2], 31:31 + x.data.shape[3]]
+        h = upscore8[:, :, 31:31 + x.shape[2], 31:31 + x.shape[3]]
         score = h  # 1/1
         self.score = score
 
@@ -171,6 +171,7 @@ class FCN8s(chainer.Chain):
         loss = F.softmax_cross_entropy(score, t, normalize=False, class_weight=self.class_weight)
         if np.isnan(float(loss.data)):
             raise ValueError('Loss is nan.')
+        chainer.report({'loss': loss}, self)
         return loss
 
     def init_from_fcn16s(self, fcn16s):
@@ -192,6 +193,18 @@ class FCN8s(chainer.Chain):
             path=cls.pretrained_model,
             md5='256c2a8235c1c65e62e48d3284fbd384',
         )
+
+    def predict(self, imgs):
+        lbls = []
+        for img in imgs:
+            with chainer.no_backprop_mode(), \
+                    chainer.using_config('train', False):
+                x = self.xp.asarray(img[None])
+                self.__call__(x)
+                lbl = chainer.functions.argmax(self.score, axis=1)
+            lbl = chainer.cuda.to_cpu(lbl.array[0])
+            lbls.append(lbl)
+        return lbls
 
 
 class FCN8sAtOnce(FCN8s):
@@ -270,8 +283,8 @@ class FCN8sAtOnce(FCN8s):
 
         # score_pool4c
         h = score_pool4[:, :,
-                        5:5 + upscore2.data.shape[2],
-                        5:5 + upscore2.data.shape[3]]
+                        5:5 + upscore2.shape[2],
+                        5:5 + upscore2.shape[3]]
         score_pool4c = h  # 1/16
 
         # fuse_pool4
@@ -284,8 +297,8 @@ class FCN8sAtOnce(FCN8s):
 
         # score_pool4c
         h = score_pool3[:, :,
-                        9:9 + upscore_pool4.data.shape[2],
-                        9:9 + upscore_pool4.data.shape[3]]
+                        9:9 + upscore_pool4.shape[2],
+                        9:9 + upscore_pool4.shape[3]]
         score_pool3c = h  # 1/8
 
         # fuse_pool3
@@ -297,7 +310,7 @@ class FCN8sAtOnce(FCN8s):
         upscore8 = h  # 1/1
 
         # score
-        h = upscore8[:, :, 31:31 + x.data.shape[2], 31:31 + x.data.shape[3]]
+        h = upscore8[:, :, 31:31 + x.shape[2], 31:31 + x.shape[3]]
         score = h  # 1/1
         self.score = score
 
@@ -308,6 +321,7 @@ class FCN8sAtOnce(FCN8s):
         loss = F.softmax_cross_entropy(score, t, normalize=False, class_weight=self.class_weight)
         if np.isnan(float(loss.data)):
             raise ValueError('Loss is nan.')
+        chainer.report({'loss': loss}, self)
         return loss
 
     def init_from_vgg16(self, vgg16):
