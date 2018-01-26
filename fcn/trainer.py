@@ -304,6 +304,6 @@ class Trainer(object):
                     'train/fwavacc': acc[3],
                 })
 
-            if iteration >= self.max_iter:
-                self._save_model()
+            # if iteration >= self.max_iter:
+            #     self._save_model()
                 break
