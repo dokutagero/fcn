@@ -41,7 +41,7 @@ def transform_default_resnet(inputs):
     img = inputs[0]
 
     #these are the resnet default means
-    MEAN_BGR = np.array([123.152, 115.903,  103.063 ]) 
+    MEAN_BGR = np.array([103.063,  115.903,  123.152]) 
 
     img = img[:, :, ::-1]  # RGB -> BGR
     img = img.astype(np.float32)

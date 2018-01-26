@@ -135,21 +135,34 @@ class ResNetLayersFCN32(link.Chain):
                 lastlayerout = h
 
         #lastlayerout = lastlayerout[:, :, 19:19 + x.data.shape[2], 19:19 + x.data.shape[3]]
+
+        #minumum increase in size: 30  maximum increase in size: 61   (increase in size depends on original image size, if its a (mulitple of 32)+2 the increase is 30)
+        #   in  -> out
+        #   516 -> 576
+        #   515 -> 576
+        #   514 -> 544
+        #   513 -> 544
+        #   512 -> 544
+        #   511 -> 544
+        #   510 -> 544
+        #      ...
+        #   483 -> 544
+        #   482 -> 512
+        #   481 -> 512
+        #      ...
+        #   451 -> 512
+        #   450 -> 480
+        #      ...
+
+
         print("Just FYI: In dimensions: {}  Out dimensions:  {}".format(x.data.shape, lastlayerout.data.shape))   
 
         if lastlayerout.data.shape[2] >= x.data.shape[2] and lastlayerout.data.shape[3] >= x.data.shape[3]:
-            xoffset = int((lastlayerout.data.shape[2] - x.data.shape[2]) / 2)
-            yoffset = int((lastlayerout.data.shape[3] - x.data.shape[3]) / 2)
+            xoffset = 15 #15=30/2  #int((lastlayerout.data.shape[2] - x.data.shape[2]) / 2)
+            yoffset = 15 #15=30/2  #int((lastlayerout.data.shape[3] - x.data.shape[3]) / 2)
             lastlayerout = lastlayerout[:, :, xoffset:xoffset + x.data.shape[2], yoffset:yoffset + x.data.shape[3]]
-        elif lastlayerout.data.shape[2] < x.data.shape[2] and lastlayerout.data.shape[3] < x.data.shape[3]:
-            print("Network output is smaller than original image. Padding with zeros. In dimensions: {}  Out dimensions:  {}".format(x.data.shape, lastlayerout.data.shape))
-            tmp = np.zeros(x.data.shape)
-            xoffset = int((x.data.shape[2] - lastlayerout.data.shape[2]) / 2)
-            yoffset = int((y.data.shape[2] - lastlayerout.data.shape[3]) / 2)
-            tmp[:lastlayerout.shape[0],:lastlayerout.shape[1],xoffset:xoffset+lastlayerout.shape[2],yoffset:yoffset+lastlayerout.shape[3]] = lastlayerout.data
-            lastlayerout.data = tmp
         else:
-            print("Some weird input/output shape constellation. Not implementet yet because hopefully not needed. Setting output to all 0 in the correct shape to avoid a crash. If this message ever shows up, we should implement a solution. In dimensions: {}  Out dimensions:  {}".format(x.data.shape, lastlayerout.data.shape))
+            print("Output is smaller than input. This should not happen. Setting output to all 0 in the correct shape to avoid a crash. If this message ever shows up, we should implement a solution. In dimensions: {}  Out dimensions:  {}".format(x.data.shape, lastlayerout.data.shape))
             lastlayerout = np.zeros(x.data.shape)
 
         if lastlayerout.data.shape != x.data.shape:
@@ -166,6 +179,19 @@ class ResNetLayersFCN32(link.Chain):
         if np.isnan(float(loss.data)):
             raise ValueError('Loss is nan.')
         return loss
+
+
+    def predict(self, imgs):
+        lbls = []
+        for img in imgs:
+            with chainer.no_backprop_mode(), \
+                    chainer.using_config('train', False):
+                x = self.xp.asarray(img[None])
+                self.__call__(x)
+                lbl = chainer.functions.argmax(self.score, axis=1)
+            lbl = chainer.cuda.to_cpu(lbl.array[0])
+            lbls.append(lbl)
+        return lbls
 
 
 
