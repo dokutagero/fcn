@@ -36,3 +36,18 @@ def transform_bridge_vgg16(inputs):
     transformed = list(inputs)
     transformed[0] = img
     return transformed
+
+def transform_default_resnet(inputs):
+    img = inputs[0]
+
+    #these are the resnet default means
+    MEAN_BGR = np.array([123.152, 115.903,  103.063 ]) 
+
+    img = img[:, :, ::-1]  # RGB -> BGR
+    img = img.astype(np.float32)
+    img -= MEAN_BGR
+    img = img.transpose(2, 0, 1)  # H, W, C -> C, H, W
+
+    transformed = list(inputs)
+    transformed[0] = img
+    return transformed
