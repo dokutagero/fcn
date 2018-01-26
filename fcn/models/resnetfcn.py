@@ -155,7 +155,7 @@ class ResNetLayersFCN32(link.Chain):
         #      ...
 
 
-        print("Just FYI: In dimensions: {}  Out dimensions:  {}".format(x.data.shape, lastlayerout.data.shape))   
+        #print("Just FYI: In dimensions: {}  Out dimensions:  {}".format(x.data.shape, lastlayerout.data.shape))   
 
         if lastlayerout.data.shape[2] >= x.data.shape[2] and lastlayerout.data.shape[3] >= x.data.shape[3]:
             xoffset = 15 #15=30/2  #int((lastlayerout.data.shape[2] - x.data.shape[2]) / 2)
