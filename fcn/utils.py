@@ -109,6 +109,39 @@ def _fast_hist(label_true, label_pred, n_class):
     return hist
 
 
+#label true needs to have the label <n_class> for none, <n_class+1> for core and <n_class+2> for union
+#in our case 3 for none, 4 for core and 5 for union
+def get_hepps_metric_for_class(class_label, label_true, label_pred, n_class):
+    hist_dim = n_class+3
+
+    hist = _fast_hist(label_true.flatten(), label_pred.flatten(), hist_dim)
+    #this is for an individual image, to compute the score for all the images at once, replace the previous line by the following, and pass batches
+    #
+    #hist = np.zeros((hist_dim, hist_dim))
+    #for lt, lp in zip(label_true, label_pred):
+    #    hist += _fast_hist(lt.flatten(), lp.flatten(), n_class)
+
+    row_sums = hist.sum(axis=1)
+    core = float(row_sums[-2])
+    union = float(row_sums[-1])
+    prediction_intersection_core = float(hist[-2, class_label])
+    prediction_outside_of_union_and_core = float(hist[-3, class_label])
+
+    if core > 0:
+        core_score = prediction_intersection_core/core
+    else:
+        core_score = 1
+
+    if union > 0:
+        union_score = max(union-prediction_outside_of_union_and_core, 0)/union
+    else:
+        #no union -> this class probably does not exist in this image
+        return float('nan')
+
+    return core_score*union_score
+
+
+
 def label_accuracy_score(label_trues, label_preds, n_class):
     """Returns accuracy score evaluation result.
 
