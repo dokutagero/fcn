@@ -16,14 +16,14 @@ import fcn
 here = osp.dirname(osp.abspath(__file__))
 
 
-def get_data():
+def get_data(deck_flag, data_augmentation):
     dataset_train = fcn.datasets.BridgeSeg(split='train')
 
     class_names = dataset_train.class_names
 
     # Include this parameters in main function
-    deck_flag = bool(args.deck_mask) 
-    data_augmentation = bool(args.data_augmentation)
+    deck_flag = bool(deck_flag) 
+    data_augmentation = bool(data_augmentation)
     class_weight_flag = False
 
 
@@ -57,6 +57,7 @@ def get_data():
         dataset_valid, fcn.datasets.transform_lsvrc2012_vgg16)
     dataset_train_nocrop = chainer.datasets.TransformDataset(
         dataset_train_nocrop, fcn.datasets.transform_lsvrc2012_vgg16)
+    num_train_samples = len(dataset_train)
     
     # Create iterators
     iter_train = chainer.iterators.SerialIterator(
@@ -66,7 +67,7 @@ def get_data():
     iter_train_nocrop = chainer.iterators.SerialIterator(
         dataset_train_nocrop, batch_size=1, repeat=False, shuffle=False)
 
-    return class_names, iter_train, iter_valid, iter_train_nocrop
+    return num_train_samples, class_names, iter_train, iter_valid, iter_train_nocrop
 
 
 def get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop,
@@ -130,7 +131,14 @@ def get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop,
 def main():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-g', '--gpu', type=int, required=True, help='gpu id')
+    parser.add_argument('-g', '--gpu', type=int, required=True, help='GPU id')
+    parser.add_argument('-da', '--data-augmentation', type=int, \
+                        default=0, choices=(0,1),
+                        help='Data augmentation flag. Default 0, 1 for data augmentation')
+    parser.add_argument('-d', '--deck-mask', type=int, default=1, choices=(0,1),\
+                        help='Applying deck mask. Default 1, 0 for not masking deck')
+    parser.add_argument('-e', '--epochs', type=int, default=100, choices=range(1000), \
+                        help='Number of epochs', metavar='range(0...1000)')
     args = parser.parse_args()
 
     args.model = 'FCN32s'
@@ -138,17 +146,18 @@ def main():
     args.momentum = 0.99
     args.weight_decay = 0.0005
 
-    args.max_iteration = 100000
     args.interval_print = 20
-    args.interval_eval = 4000
 
     now = datetime.datetime.now()
     args.timestamp = now.isoformat()
     args.out = osp.join(here, 'logs', now.strftime('%Y%m%d_%H%M%S'))
 
     # data
-    class_names, iter_train, iter_valid, iter_train_nocrop = get_data()
+    num_train_samples, class_names, iter_train, iter_valid, iter_train_nocrop = get_data(args.deck_mask, \
+                                                                      args.data_augmentation)
     n_class = len(class_names)
+    args.max_iteration = args.epochs * train_samples
+    args.interval_eval = train_samples
 
     # model
     vgg = fcn.models.VGG16()
@@ -172,7 +181,7 @@ def main():
     model.upscore.disable_update()
 
     # trainer
-    trainer = get_trainer(optimizer, iter_train, iter_valid, iter_valid_raw,
+    trainer = get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop,
                           class_names, args)
     trainer.run()
 
