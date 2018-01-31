@@ -53,11 +53,14 @@ def get_data():
     # Apply per channel mean substraction
     dataset_train = chainer.datasets.TransformDataset(
         dataset_train, fcn.datasets.transform_lsvrc2012_vgg16)
-    iter_train = chainer.iterators.SerialIterator(
-        dataset_train, batch_size=1)
-
     dataset_valid = chainer.datasets.TransformDataset(
         dataset_valid, fcn.datasets.transform_lsvrc2012_vgg16)
+    dataset_train_nocrop = chainer.datasets.TransformDataset(
+        dataset_train_nocrop, fcn.datasets.transform_lsvrc2012_vgg16)
+    
+    # Create iterators
+    iter_train = chainer.iterators.SerialIterator(
+        dataset_train, batch_size=1)
     iter_valid = chainer.iterators.SerialIterator(
         dataset_valid, batch_size=1, repeat=False, shuffle=False)
     iter_train_nocrop = chainer.iterators.SerialIterator(
