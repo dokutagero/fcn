@@ -2,9 +2,11 @@ import chainer
 import collections
 import numpy as np
 import os.path as osp
+from os import listdir
 import piexif
 import scipy.io
 import cv2
+import random
 
 import imgaug as ia
 from imgaug import augmenters as iaa
@@ -12,8 +14,10 @@ from imgaug import augmenters as iaa
 from PIL import Image
 from .. import data
 
-DATASET_BRIDGE_DIR = osp.expanduser('/root/fcn/bridgedegradationseg/dataset/')
-# DATASET_BRIDGE_DIR = osp.expanduser('/home/dokutagero/repos/dataset_bridge/')
+from scripts import label2mask as l2m
+
+# DATASET_BRIDGE_DIR = osp.expanduser('/root/fcn/bridgedegradationseg/dataset/')
+DATASET_BRIDGE_DIR = osp.expanduser('/home/dokutagero/repos/dataset_bridge/')
 
 class BridgeSegBase(chainer.dataset.DatasetMixin):
 
@@ -59,19 +63,19 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
             self.hooks_lbl = ia.HooksImages(activator=activator_lbl)
 
         self.files = collections.defaultdict(list)
-        for split in ['train', 'validation']:
+        for split in ['train_xml', 'validation_xml']:
             imgsets_file = osp.join(DATASET_BRIDGE_DIR, "{}.txt".format(split))
             for did in open(imgsets_file):
                 did = did.strip()
                 img_file = osp.join(DATASET_BRIDGE_DIR, 'bridge_dataset/', '{}.jpg'.format(did))
-                lbl_file = osp.join(DATASET_BRIDGE_DIR, 'bridge_masks/', '{}.png'.format(did))
+                lbl_files = [did.split('/')[-2]+'/'+f for f in listdir(osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', did.split('/')[-2])) if f.startswith(did.split('/')[-1])]
                 deck_file = ''
                 if self.black_out_non_deck:
                     deck_file = osp.join(DATASET_BRIDGE_DIR, 'deck_masks/', '{}.png'.format(did))
 
                 self.files[split].append({
                     'img' : img_file,
-                    'lbl' : lbl_file,
+                    'lbl' : lbl_files,
                     'deck' : deck_file,
                 })
 
@@ -83,11 +87,20 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         img_file = data_file['img']
         # piexif.remove(img_file)
         img = Image.open(img_file)
+        imsize = img.size
         # wsize = int(float(img.size[0]) * 0.5)
         # hsize = int(float(img.size[1]) * 0.5)
         # img = img.resize((wsize, hsize))
-        lbl_file = data_file['lbl']
-        lbl = Image.open(lbl_file)
+        if not self.use_data_augmentation:
+            lbl_file = data_file['lbl'][0]
+        else:
+            lbl_file = random.choice(data_file['lbl']) 
+
+        lbl_name = osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', lbl_file)
+        print(lbl_name)
+        lbl = l2m(lbl_name, imsize)
+        import pdb; pdb.set_trace()
+        # lbl = Image.open(lbl_file)
         # lbl = lbl.resize((wsize, hsize))
 
         img = np.array(img, dtype=np.uint8)

@@ -66,14 +66,13 @@ def paint_mask(damage_list, img_shape):
                         red,
                         mask_with_delamination)
 
-    return Image.fromarray(final_mask * 255)
+    return final_mask * 255
 
 
-if __name__ == '__main__':
-    im = Image.open('1301.jpg')
-    width = im.size[0]
-    height = im.size[1]
-    doc = get_xml('1301.xml')
+def label2mask(filename, imsize):
+    width = imsize[0]
+    height = imsize[1]
+    doc = get_xml(filename)
     damage_list = remove_deleted_mask(doc)
-    result = paint_mask(damage_list, [height, width])
-    result.save('result.png')
+    label = paint_mask(damage_list, [height, width])
+    return label
