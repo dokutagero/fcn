@@ -172,6 +172,23 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         img = img * deck.astype('uint8') 
         return img, lbl
 
+    def mask_preprocess(mask):
+
+        new_mask = -1 * np.ones((masks_class[0].shape[0], masks_class[0].shape[1], len(classes)))
+        for c in classes:
+            intersection = np.ones(masks_class[0].shape)
+            union = np.zeros(masks_class[0].shape)
+            for mask in masks_class:
+                if c not in mask:
+                    continue
+                intersection *= (mask==c).astype(dtype=np.uint32)
+                union += ((mask==c).astype(dtype=np.uint32))
+                union = (union>0).astype(dtype=np.uint32)
+            new_mask[:, :, c][intersection == 1] = c
+            new_mask[:, :, c][(1-union) == 1]= (c + len(classes))
+
+        return new_mask
+
     def augment_image(self, img, lbl):
     
         seq_det = self.seq.to_deterministic() #seq_det is now a fixes sequence, so lbl and deck get treated the same as img
