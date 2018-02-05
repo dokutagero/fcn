@@ -5,8 +5,8 @@ import xmltodict
 from PIL import Image, ImageDraw
 
 
-def get_xml():
-    with open('0049.xml') as fd:
+def get_xml(filename):
+    with open(filename) as fd:
         doc = xmltodict.parse(fd.read())
         return doc
 
@@ -62,10 +62,10 @@ def paint_mask(damage_list, img_shape):
     return Image.fromarray(deck_mask * 255)
 
 
-if __name__ == '__main__':
-    doc = get_xml()
-    height = int(doc['annotation']['imagesize']['nrows'])
-    width = int(doc['annotation']['imagesize']['ncols'])
+def deck2mask(filename, imsize):
+    width = imsize[0]
+    height = imsize[1]
+    doc = get_xml(filename)
     damage_list = remove_deleted_mask(doc)
-    result = paint_mask(damage_list, [height, width])
-    result.save('deck_result.png')
+    label = paint_mask(damage_list, [height, width])
+    return label

@@ -66,7 +66,7 @@ def paint_mask(damage_list, img_shape):
                         red,
                         mask_with_delamination)
 
-    return final_mask * 255
+    return (final_mask * 255).astype(dtype=np.uint32)
 
 
 def label2mask(filename, imsize):
