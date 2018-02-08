@@ -30,35 +30,39 @@ def calc_semantic_segmentation_confusion(pred_labels, gt_labels):
         class :math:`j` by the prediction.
 
     """
+    
     pred_labels = iter(pred_labels)
     gt_labels = iter(gt_labels)
 
     n_class = 0
-    confusion = np.zeros((n_class, n_class), dtype=np.int64)
-    for pred_label, gt_label in six.moves.zip(pred_labels, gt_labels):
-        if pred_label.ndim != 2 or gt_label.ndim != 2:
-            raise ValueError('ndim of labels should be two.')
-        if pred_label.shape != gt_label.shape:
-            raise ValueError('Shape of ground truth and prediction should'
-                             ' be same.')
-        pred_label = pred_label.flatten()
-        gt_label = gt_label.flatten()
+    confusion = np.zeros((n_class, n_class*2), dtype=np.int64)
+    # mc = multichannel
+    for pred_label, gt_label_mc in six.moves.zip(pred_labels, gt_labels):
+        import pdb; pdb.set_trace()
+        for channel in range(gt_label_mc.shape[-1]):
+            if pred_label.ndim != 2 or gt_label_mc[:,:,channel].ndim != 2:
+                raise ValueError('ndim of labels should be two.')
+            if pred_label.shape != gt_label_mc[:,:,channel].shape:
+                raise ValueError('Shape of ground truth and prediction should'
+                                 ' be same.')
+            pred_label_flat = pred_label.flatten()
+            gt_label = gt_label_mc[:,:,channel].flatten()
 
-        # Dynamically expand the confusion matrix if necessary.
-        lb_max = np.max((pred_label, gt_label))
-        if lb_max >= n_class:
-            expanded_confusion = np.zeros(
-                (lb_max + 1, lb_max + 1), dtype=np.int64)
-            expanded_confusion[0:n_class, 0:n_class] = confusion
+            # Dynamically expand the confusion matrix if necessary.
+            lb_max = np.max(pred_label_flat)#, gt_label))
+            if lb_max >= n_class:
+                expanded_confusion = np.zeros(
+                    ((lb_max + 1)*2, (lb_max + 1)*2), dtype=np.int64)
+                expanded_confusion[0:n_class*2, 0:n_class*2] = confusion
 
-            n_class = lb_max + 1
-            confusion = expanded_confusion
+                n_class = lb_max + 1
+                confusion = expanded_confusion
 
-        # Count statistics from valid pixels.
-        mask = gt_label >= 0
-        confusion += np.bincount(
-            n_class * gt_label[mask].astype(int) +
-            pred_label[mask], minlength=n_class**2).reshape((n_class, n_class))
+            # Count statistics from valid pixels.
+            mask = gt_label >= 0
+            confusion += np.bincount(
+                n_class * gt_label[mask].astype(int) +
+                pred_label_flat[mask], minlength=((n_class*2)**2)).reshape((n_class*2, n_class*2))
 
     for iter_ in (pred_labels, gt_labels):
         # This code assumes any iterator does not contain None as its items.
