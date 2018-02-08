@@ -115,9 +115,16 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
                 img = self.preprocess_fn(img)
 
             if self.black_out_non_deck:
-                deck_file = data_file['deck']
-                deck = Image.open(deck_file)
-                deck = np.array(deck, dtype=np.uint32)
+                lbl_names = []
+                imsize = img.size
+                lbl_names.append(osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', label_file))
+                decks = [np.array(d2m(d, imsize)).astype(dtype=np.uint32) for d in lbl_names]
+                deck = np.zeros(decks[0].shape)
+                deck = sum(decks)[:,:,0]
+                deck[deck>0] = 255
+                # deck_file = data_file['deck']
+                # deck = Image.open(deck_file)
+                # deck = np.array(deck, dtype=np.uint32)
                 img, lbl = self.black_out_non_deck_fn(img, lbl, deck)
 
             if self.rcrop.any() != None:
@@ -141,11 +148,11 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
             lbl = self.mask_preprocess(masks) 
             if self.black_out_non_deck:
                 decks = [np.array(d2m(d, imsize)).astype(dtype=np.uint32) for d in lbl_names]
-                import pdb; pdb.set_trace()
                 deck = np.zeros(decks[0].shape)
                 deck = sum(decks)[:,:,0]
                 deck[deck>0] = 255
                 img, lbl = self.black_out_non_deck_fn(img, lbl, deck)
+
 
 
         
@@ -194,7 +201,7 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
 
     def mask_preprocess(self, masks):
 
-        new_mask = -1 * np.ones((masks[0].shape[0], masks[0].shape[1], len(self.class_names)))
+        new_mask = -1 * np.ones((masks[0].shape[0], masks[0].shape[1], len(self.class_names)), dtype=np.int32)
         for c in range(len(self.class_names)):
             intersection = np.ones(masks[0].shape)
             union = np.zeros(masks[0].shape)
