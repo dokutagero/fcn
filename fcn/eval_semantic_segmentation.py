@@ -38,7 +38,6 @@ def calc_semantic_segmentation_confusion(pred_labels, gt_labels):
     confusion = np.zeros((n_class, n_class*2), dtype=np.int64)
     # mc = multichannel
     for pred_label, gt_label_mc in six.moves.zip(pred_labels, gt_labels):
-        import pdb; pdb.set_trace()
         for channel in range(gt_label_mc.shape[-1]):
             if pred_label.ndim != 2 or gt_label_mc[:,:,channel].ndim != 2:
                 raise ValueError('ndim of labels should be two.')
@@ -49,11 +48,11 @@ def calc_semantic_segmentation_confusion(pred_labels, gt_labels):
             gt_label = gt_label_mc[:,:,channel].flatten()
 
             # Dynamically expand the confusion matrix if necessary.
-            lb_max = np.max(pred_label_flat)#, gt_label))
+            lb_max = max(np.maximum(pred_label_flat, gt_label))
             if lb_max >= n_class:
                 expanded_confusion = np.zeros(
-                    ((lb_max + 1)*2, (lb_max + 1)*2), dtype=np.int64)
-                expanded_confusion[0:n_class*2, 0:n_class*2] = confusion
+                    ((lb_max + 1), (lb_max + 1)), dtype=np.int64)
+                expanded_confusion[0:n_class, 0:n_class] = confusion
 
                 n_class = lb_max + 1
                 confusion = expanded_confusion
@@ -62,7 +61,8 @@ def calc_semantic_segmentation_confusion(pred_labels, gt_labels):
             mask = gt_label >= 0
             confusion += np.bincount(
                 n_class * gt_label[mask].astype(int) +
-                pred_label_flat[mask], minlength=((n_class*2)**2)).reshape((n_class*2, n_class*2))
+                pred_label_flat[mask], minlength=(n_class**2)).reshape((n_class, n_class))
+            import pdb; pdb.set_trace()
 
     for iter_ in (pred_labels, gt_labels):
         # This code assumes any iterator does not contain None as its items.
@@ -95,9 +95,12 @@ def calc_semantic_segmentation_iou(confusion):
         :math:`(n\_class,)`.
 
     """
-    iou_denominator = (confusion.sum(axis=1) + confusion.sum(axis=0)
-                       - np.diag(confusion))
-    iou = np.diag(confusion) / iou_denominator
+    nclass = confusion.shape[0]//2
+    iou_numerator = np.diag(confusion[:nclass, :nclass])
+    iou_denominator = np.diag(confusion[nclass:,:nclass]) + iou_numerator
+    # iou_denominator = (confusion.sum(axis=1) + confusion.sum(axis=0)
+    #                    - np.diag(confusion))
+    iou = iou_numerator / iou_denominator
     return iou
 
 
@@ -175,10 +178,10 @@ def eval_semantic_segmentation(pred_labels, gt_labels):
     confusion = calc_semantic_segmentation_confusion(
         pred_labels, gt_labels)
     iou = calc_semantic_segmentation_iou(confusion)
-    pixel_accuracy = np.diag(confusion).sum() / confusion.sum()
-    class_accuracy = np.diag(confusion) / np.sum(confusion, axis=1)
+    # pixel_accuracy = np.diag(confusion).sum() / confusion.sum()
+    # class_accuracy = np.diag(confusion) / np.sum(confusion, axis=1)
 
-    return {'iou': iou, 'miou': np.nanmean(iou),
-            'pixel_accuracy': pixel_accuracy,
-            'class_accuracy': class_accuracy,
-            'mean_class_accuracy': np.nanmean(class_accuracy)}
+    return {'iou': iou, 'miou': iou}
+            # 'pixel_accuracy': pixel_accuracy,
+            # 'class_accuracy': class_accuracy,
+            # 'mean_class_accuracy': np.nanmean(class_accuracy)}
