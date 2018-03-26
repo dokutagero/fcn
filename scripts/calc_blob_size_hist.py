@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 import xmltodict
 
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 
+XML_FILE_PATH = '/Users/mrteera/workspace/blob_size/bridge_annotations_ie1/'
 
 def get_xml(filename):
     with open(filename) as fd:
@@ -16,6 +18,8 @@ def get_xml(filename):
 def remove_deleted_mask(doc):
     damage_list = []
     mask_object = doc['annotation']['object']
+    if not isinstance(mask_object, list):
+        mask_object = [mask_object]
     for damage in mask_object:
         if damage['deleted'] == '0':
             damage_list.append(damage)
@@ -24,7 +28,6 @@ def remove_deleted_mask(doc):
 
 
 # https://stackoverflow.com/a/24468019/1971997
-# TODO: need to calculate polygon area with holes
 def PolygonArea(damage_pt):
     corners = []
     for pt in damage_pt:
@@ -39,8 +42,18 @@ def PolygonArea(damage_pt):
     return [area, corners]
 
 
-if __name__ == '__main__':
-    doc = get_xml('1034.xml')
+def plot_hist(delamination_blob_size, rebar_exposure_blob_size):
+    plt.figure(1)
+    plt.hist(delamination_blob_size, bins=2500)
+    plt.title('Histogram of delamination blob size')
+    plt.figure(2)
+    plt.hist(rebar_exposure_blob_size, bins=2500)
+    plt.title('Histogram of rebar_exposure blob size')
+    plt.show()
+
+
+def get_blob_sizes(xml_file):
+    doc = get_xml(xml_file)
     damage_list = remove_deleted_mask(doc)
     delamination_blob_size = []
     rebar_exposure_blob_size = []
@@ -67,10 +80,19 @@ if __name__ == '__main__':
         elif damage['name'] == 'rebar_exposure':
             blob_size = PolygonArea(damage['polygon']['pt'])[0]
             rebar_exposure_blob_size.append(blob_size)
-    plt.figure(1)
-    plt.hist(delamination_blob_size, bins=100)
-    plt.title('Histogram of delamination blob size')
-    plt.figure(2)
-    plt.hist(rebar_exposure_blob_size, bins=100)
-    plt.title('Histogram of rebar_exposure blob size')
-    plt.show()
+    return delamination_blob_size, rebar_exposure_blob_size
+
+
+if __name__ == '__main__':
+    delamination_areas = []
+    rebar_exposure_areas = []
+    for deck in ['deck_a/', 'deck_c/', 'deck_d/', 'deck_e/']:
+        for xml_file in os.listdir(XML_FILE_PATH + deck):
+            delamination_blob_size, rebar_exposure_blob_size = get_blob_sizes(XML_FILE_PATH + deck + xml_file)
+            delamination_areas = delamination_areas + delamination_blob_size
+            rebar_exposure_areas = rebar_exposure_areas + rebar_exposure_blob_size
+    print('=-=-=-=-=-=-=-=-=-=-=-=- DELAMINATION =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-')
+    print(sorted(delamination_areas))
+    print('=-=-=-=-=-=-=-=-=-=-=- REBAR EXPOSURE =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-')
+    print(sorted(rebar_exposure_areas))
+    plot_hist(delamination_areas, rebar_exposure_areas)
