@@ -2,9 +2,11 @@ import chainer
 import collections
 import numpy as np
 import os.path as osp
+from os import listdir
 import piexif
 import scipy.io
 import cv2
+import random
 
 import imgaug as ia
 from imgaug import augmenters as iaa
@@ -12,8 +14,11 @@ from imgaug import augmenters as iaa
 from PIL import Image
 from .. import data
 
-DATASET_BRIDGE_DIR = osp.expanduser('/root/fcn/bridgedegradationseg/dataset/')
-# DATASET_BRIDGE_DIR = osp.expanduser('/home/dokutagero/repos/dataset_bridge/')
+from scripts import label2mask as l2m
+from scripts import deck2mask as d2m
+
+# DATASET_BRIDGE_DIR = osp.expanduser('/root/fcn/bridgedegradationseg/dataset/')
+DATASET_BRIDGE_DIR = osp.expanduser('/home/dokutagero/repos/dataset_bridge/')
 
 class BridgeSegBase(chainer.dataset.DatasetMixin):
 
@@ -59,20 +64,23 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
             self.hooks_lbl = ia.HooksImages(activator=activator_lbl)
 
         self.files = collections.defaultdict(list)
-        for split in ['train', 'validation']:
+        for split in ['train_xml', 'validation_xml']:
             imgsets_file = osp.join(DATASET_BRIDGE_DIR, "{}.txt".format(split))
             for did in open(imgsets_file):
                 did = did.strip()
                 img_file = osp.join(DATASET_BRIDGE_DIR, 'bridge_dataset/', '{}.jpg'.format(did))
-                lbl_file = osp.join(DATASET_BRIDGE_DIR, 'bridge_masks/', '{}.png'.format(did))
-                deck_file = ''
-                if self.black_out_non_deck:
-                    deck_file = osp.join(DATASET_BRIDGE_DIR, 'deck_masks/', '{}.png'.format(did))
+                lbl_files = [did.split('/')[-2]+'/'+f for f in listdir(osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', did.split('/')[-2])) if f.startswith(did.split('/')[-1])]
+                deck_files = ''
 
+                if self.black_out_non_deck:
+                    # deck_file = osp.join(DATASET_BRIDGE_DIR, 'deck_masks/', '{}.png'.format(did))
+                    deck_files = [did.split('/')[-2]+'/'+f for f in listdir(osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', did.split('/')[-2])) if f.startswith(did.split('/')[-1])]
+
+                # print(deck_files)
                 self.files[split].append({
                     'img' : img_file,
-                    'lbl' : lbl_file,
-                    'deck' : deck_file,
+                    'lbl' : lbl_files,
+                    'deck' : deck_files,
                 })
 
     def __len__(self):
@@ -83,39 +91,71 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         img_file = data_file['img']
         # piexif.remove(img_file)
         img = Image.open(img_file)
+        imsize = img.size
         # wsize = int(float(img.size[0]) * 0.5)
         # hsize = int(float(img.size[1]) * 0.5)
         # img = img.resize((wsize, hsize))
-        lbl_file = data_file['lbl']
-        lbl = Image.open(lbl_file)
-        # lbl = lbl.resize((wsize, hsize))
+        if self.split == 'train_xml':
+            if not self.use_data_augmentation:
+                lbl_file = data_file['lbl'][0]
+            else:
+                lbl_file = random.choice(data_file['lbl']) 
 
-        img = np.array(img, dtype=np.uint8)
-        lbl = np.array(lbl, dtype=np.uint32)
-        lbl = self.color_class_label(lbl)
+            lbl_name = osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', lbl_file)
+            lbl = l2m(lbl_name, imsize)
+            # lbl = Image.open(lbl_file)
+            # lbl = lbl.resize((wsize, hsize))
 
-        #important: keep this BEFORE black_out_non_deck, as the histogram spreading sometimes causes the black area not to be fully black anymore
-        if self.preprocess:
-            img = self.preprocess_fn(img)
+            img = np.array(img, dtype=np.uint8)
+            lbl = np.array(lbl, dtype=np.uint32)
+            lbl = self.color_class_label(lbl)
 
-        if self.black_out_non_deck:
-            deck_file = data_file['deck']
-            deck = Image.open(deck_file)
-            deck = np.array(deck, dtype=np.uint32)
-            img, lbl = self.black_out_non_deck_fn(img, lbl, deck)
+            #important: keep this BEFORE black_out_non_deck, as the histogram spreading sometimes causes the black area not to be fully black anymore
+            if self.preprocess:
+                img = self.preprocess_fn(img)
 
-        if self.rcrop.any() != None:
-            img,lbl = self.random_crop(img,lbl, self.rcrop)
+            if self.black_out_non_deck:
+                lbl_names = []
+                imsize = img.size
+                lbl_names.append(osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', label_file))
+                decks = [np.array(d2m(d, imsize)).astype(dtype=np.uint32) for d in lbl_names]
+                deck = np.zeros(decks[0].shape)
+                deck = sum(decks)[:,:,0]
+                deck[deck>0] = 255
+                # deck_file = data_file['deck']
+                # deck = Image.open(deck_file)
+                # deck = np.array(deck, dtype=np.uint32)
+                img, lbl = self.black_out_non_deck_fn(img, lbl, deck)
 
-        if self.use_data_augmentation:
-            lbl+=1 #imaug library pads with 0. We want the label to be padded with 'non-deck', which has the label -1, hence this cheap hack
-            img, lbl = self.augment_image(img,lbl)
-            lbl-=1
-            #if np.unique(lbl).shape[0] > len(self.class_names):
-            if np.unique(lbl).shape[0] > len(self.class_names)+1: #+1 because we add -1 as a label, whcih doesnt have a class name
-                print('WARNING: someting is odd about the number of labeled classes in this image, the are {} (label: {})'.format(np.unique(lbl), lbl_file))
+            if self.rcrop.any() != None:
+                img,lbl = self.random_crop(img,lbl, self.rcrop)
+
+            if self.use_data_augmentation:
+                lbl+=1 #imaug library pads with 0. We want the label to be padded with 'non-deck', which has the label -1, hence this cheap hack
+                img, lbl = self.augment_image(img,lbl)
+                lbl-=1
+                #if np.unique(lbl).shape[0] > len(self.class_names):
+                if np.unique(lbl).shape[0] > len(self.class_names)+1: #+1 because we add -1 as a label, whcih doesnt have a class name
+                    print('WARNING: someting is odd about the number of labeled classes in this image, the are {} (label: {})'.format(np.unique(lbl), lbl_file))
+
+        elif self.split == 'validation_xml':
+            lbl_names = []
+            imsize = img.size
+            img = np.array(img, dtype=np.uint8)
+            for label_file in data_file['lbl']:
+                lbl_names.append(osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', label_file))
+            masks = [self.color_class_label(l2m(m, imsize)) for m in lbl_names]
+            lbl = self.mask_preprocess(masks) 
+            if self.black_out_non_deck:
+                decks = [np.array(d2m(d, imsize)).astype(dtype=np.uint32) for d in lbl_names]
+                deck = np.zeros(decks[0].shape)
+                deck = sum(decks)[:,:,0]
+                deck[deck>0] = 255
+                img, lbl = self.black_out_non_deck_fn(img, lbl, deck)
 
 
+
+        
         return img, lbl
 
     def random_crop(self, x, y=np.array([None]), random_crop_size=None):
@@ -151,13 +191,31 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
     def black_out_non_deck_fn(self, img, lbl, deck):
         assert deck.shape[0:2] == img.shape[0:2]
         assert img.shape[2] == 3
-        assert len(deck.shape) == 2
-        assert lbl.shape == deck.shape
+        # assert len(deck.shape) == 2
+        # assert lbl.shape == deck.shape
         deck = deck/255  #so that deck is 1 or 0
         lbl[deck==0] = -1  #make everything none deck as class -1
         deck = np.repeat(deck[:,:,np.newaxis], 3, axis=2)  #duplicate deck into the 3rd dimension
         img = img * deck.astype('uint8') 
         return img, lbl
+
+    def mask_preprocess(self, masks):
+
+        new_mask = -1 * np.ones((masks[0].shape[0], masks[0].shape[1], len(self.class_names)), dtype=np.int32)
+        for c in range(len(self.class_names)):
+            intersection = np.ones(masks[0].shape)
+            union = np.zeros(masks[0].shape)
+            for mask in masks:
+                if c not in mask:
+                    intersection = np.zeros(mask.shape)
+                    continue
+                intersection *= (mask==c).astype(dtype=np.uint32)
+                union += ((mask==c).astype(dtype=np.uint32))
+                union = (union>0).astype(dtype=np.uint32)
+            new_mask[:, :, c][intersection == 1] = c
+            new_mask[:, :, c][(1-union) == 1]= (c + len(self.class_names))
+
+        return new_mask
 
     def augment_image(self, img, lbl):
     
