@@ -7,7 +7,7 @@ RUN apt-get update -y && \
     python-pip \
     python-setuptools \
     python-wheel \
-    git
+    git \
 
 RUN pip install -U pip
 RUN pip install Cython
@@ -61,5 +61,9 @@ RUN wget https://github.com/opencv/opencv/archive/3.2.0.zip \
 && make install \
 && rm /3.2.0.zip \
 && rm -r /opencv-3.2.0
+
+# Misc installs
+RUN apt install vim
+
 
 WORKDIR /root
