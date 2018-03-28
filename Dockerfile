@@ -1,4 +1,4 @@
-FROM nvidia/cuda:9.0-cudnn7-devel
+FROM nvidia/cuda:8.0-cudnn6-devel
 
 # Chainer
 RUN apt-get update -y && \
@@ -13,7 +13,7 @@ RUN pip install -U pip
 RUN pip install Cython
 RUN pip install git+https://github.com/cupy/cupy.git
 RUN pip install git+https://github.com/chainer/chainer.git
-RUN pip install gdown tqdm scipy matplotlib pandas piexif scikit-learn scikit-image imgaug
+RUN pip install gdown tqdm scipy matplotlib pandas piexif scikit-learn scikit-image imgaug chainerui
 
 # OpenCV
 RUN apt-get install -y \
