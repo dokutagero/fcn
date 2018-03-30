@@ -25,11 +25,12 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
     class_names = np.array(['non-damage', 'delamination', 'rebar_exposure'])
     class_weight_default = np.array([0.3610441, 4.6313269, 69.76223605]) #the weights will be multiplied with the loss value
 
-    def __init__(self, split='train', use_data_augmentation=False, black_out_non_deck=False, use_class_weight=False, preprocess=False):
+    def __init__(self, split='train', tstrategy=0,  use_data_augmentation=False, black_out_non_deck=False, use_class_weight=False, preprocess=False):
         self.split = split
         self.black_out_non_deck = black_out_non_deck
         self.use_data_augmentation = use_data_augmentation
         self.preprocess = preprocess
+        self.tstrategy = tstrategy
         #if black_out_non_deck or use_data_augmentation:
             #see below with the class weights
             #self.class_names = np.array(['non-damage', 'delamination', 'rebar_exposure', 'non-deck'])
@@ -64,11 +65,11 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
             self.hooks_lbl = ia.HooksImages(activator=activator_lbl)
 
         self.files = collections.defaultdict(list)
-        for split in ['train_xml', 'validation_xml', 'xval']:
+        for split in ['train_xml', 'validation_xml', 'all']:
             imgsets_file = osp.join(DATASET_BRIDGE_DIR, "{}.txt".format(split))
             for did in open(imgsets_file):
                 did = did.strip()
-                img_file = osp.join(DATASET_BRIDGE_DIR, 'bridge_dataset/', '{}.jpg'.format(did))
+                img_file = osp.join(DATASET_BRIDGE_DIR, 'bridge_images/', '{}.jpg'.format(did))
                 lbl_files = [did.split('/')[-2]+'/'+f for f in listdir(osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', did.split('/')[-2])) if f.startswith(did.split('/')[-1])]
                 deck_files = ''
 
@@ -95,16 +96,12 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         # wsize = int(float(img.size[0]) * 0.5)
         # hsize = int(float(img.size[1]) * 0.5)
         # img = img.resize((wsize, hsize))
-        if self.split == 'train_xml':
-            if not self.use_data_augmentation:
-                lbl_file = data_file['lbl'][0]
-            else:
+        if self.split == 'xval':
+            if not self.tstrategy = 0:
                 lbl_file = random.choice(data_file['lbl']) 
 
             lbl_name = osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', lbl_file)
             lbl = l2m(lbl_name, imsize)
-            # lbl = Image.open(lbl_file)
-            # lbl = lbl.resize((wsize, hsize))
 
             img = np.array(img, dtype=np.uint8)
             lbl = np.array(lbl, dtype=np.uint32)
@@ -119,12 +116,10 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
                 imsize = img.size
                 lbl_names.append(osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', label_file))
                 decks = [np.array(d2m(d, imsize)).astype(dtype=np.uint32) for d in lbl_names]
-                deck = np.zeros(decks[0].shape)
-                deck = sum(decks)[:,:,0]
-                deck[deck>0] = 255
-                # deck_file = data_file['deck']
-                # deck = Image.open(deck_file)
-                # deck = np.array(deck, dtype=np.uint32)
+                deck = deck_intersection(decks)
+                # deck = np.zeros(decks[0].shape)
+                # deck = sum(decks)[:,:,0]
+                # deck[deck>0] = 255
                 img, lbl = self.black_out_non_deck_fn(img, lbl, deck)
 
             if self.rcrop.any() != None:
@@ -158,6 +153,12 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         
         return img, lbl
 
+    def deck_intersection(decks):
+        deck = np.ones(decks[0].shape).astype(dtype=np.uint32)
+        for d in decks:
+            deck = deck * d
+        return deck
+            
     def random_crop(self, x, y=np.array([None]), random_crop_size=None):
         w, h = x.shape[1], x.shape[0]
         rangew = (w - random_crop_size[0]) // 2
