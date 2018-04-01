@@ -65,6 +65,7 @@ def paint_mask(damage_list, img_shape):
 def deck2mask(filename, imsize):
     width = imsize[0]
     height = imsize[1]
+    print(filename)
     doc = get_xml(filename)
     damage_list = remove_deleted_mask(doc)
     label = paint_mask(damage_list, [height, width])

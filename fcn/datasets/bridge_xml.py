@@ -16,6 +16,7 @@ from .. import data
 
 from scripts import label2mask as l2m
 from scripts import deck2mask as d2m
+import pdb
 
 DATASET_BRIDGE_DIR = osp.expanduser('/root/bridge_dataset/')
 # DATASET_BRIDGE_DIR = osp.expanduser('/home/dokutagero/repos/dataset_bridge/')
@@ -65,7 +66,8 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
             self.hooks_lbl = ia.HooksImages(activator=activator_lbl)
 
         self.files = collections.defaultdict(list)
-        for split in ['train_xml', 'validation_xml', 'all']:
+        # for split in ['train_xml', 'validation_xml', 'all']:
+        for split in ['all']:
             imgsets_file = osp.join(DATASET_BRIDGE_DIR, "{}.txt".format(split))
             for did in open(imgsets_file):
                 did = did.strip()
@@ -96,31 +98,39 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         # wsize = int(float(img.size[0]) * 0.5)
         # hsize = int(float(img.size[1]) * 0.5)
         # img = img.resize((wsize, hsize))
-        if self.split == 'xval':
-            if not self.tstrategy = 0:
+        img = np.array(img, dtype=np.uint8)
+        if self.split == 'all':
+            if self.tstrategy == 0:
                 lbl_file = random.choice(data_file['lbl']) 
 
-            lbl_name = osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', lbl_file)
-            lbl = l2m(lbl_name, imsize)
+                lbl_name = osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', lbl_file)
+                lbl = l2m(lbl_name, imsize)
 
-            img = np.array(img, dtype=np.uint8)
-            lbl = np.array(lbl, dtype=np.uint32)
-            lbl = self.color_class_label(lbl)
+                lbl = np.array(lbl, dtype=np.int32)
+                lbl = self.color_class_label(lbl)
 
+            elif self.tstrategy == 2:
+                lbl_names = [osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', lbl_file) for lbl_file in data_file['lbl']]
+                lbls = [self.color_class_label(np.array(l2m(lbl_name, imsize), dtype=np.int32)) for lbl_name in lbl_names]
+                lbl = self.get_uncertainty_label(lbls)
+                
             #important: keep this BEFORE black_out_non_deck, as the histogram spreading sometimes causes the black area not to be fully black anymore
             if self.preprocess:
                 img = self.preprocess_fn(img)
 
             if self.black_out_non_deck:
-                lbl_names = []
-                imsize = img.size
-                lbl_names.append(osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', label_file))
-                decks = [np.array(d2m(d, imsize)).astype(dtype=np.uint32) for d in lbl_names]
-                deck = deck_intersection(decks)
+                #imsize = img.size
+                deck_names = [osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', label_file) for label_file in data_file['deck']]
+                decks = [np.array(d2m(d, imsize)).astype(dtype=np.int32) for d in deck_names]
+                deck = self.deck_intersection(decks)
+                # we get three identical channels
+                # probably can change this since we duplicate them in black out func
+                deck = deck[:,:,0]
                 # deck = np.zeros(decks[0].shape)
                 # deck = sum(decks)[:,:,0]
                 # deck[deck>0] = 255
                 img, lbl = self.black_out_non_deck_fn(img, lbl, deck)
+
 
             if self.rcrop.any() != None:
                 img,lbl = self.random_crop(img,lbl, self.rcrop)
@@ -133,31 +143,41 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
                 if np.unique(lbl).shape[0] > len(self.class_names)+1: #+1 because we add -1 as a label, whcih doesnt have a class name
                     print('WARNING: someting is odd about the number of labeled classes in this image, the are {} (label: {})'.format(np.unique(lbl), lbl_file))
 
-        elif self.split == 'validation_xml':
-            lbl_names = []
-            imsize = img.size
-            img = np.array(img, dtype=np.uint8)
-            for label_file in data_file['lbl']:
-                lbl_names.append(osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', label_file))
-            masks = [self.color_class_label(l2m(m, imsize)) for m in lbl_names]
-            lbl = self.mask_preprocess(masks) 
-            if self.black_out_non_deck:
-                decks = [np.array(d2m(d, imsize)).astype(dtype=np.uint32) for d in lbl_names]
-                deck = np.zeros(decks[0].shape)
-                deck = sum(decks)[:,:,0]
-                deck[deck>0] = 255
-                img, lbl = self.black_out_non_deck_fn(img, lbl, deck)
 
+        # elif self.split == 'validation_xml':
+        #     lbl_names = []
+        #     imsize = img.size
+        #     img = np.array(img, dtype=np.uint8)
+        #     for label_file in data_file['lbl']:
+        #         lbl_names.append(osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', label_file))
+        #     masks = [self.color_class_label(l2m(m, imsize)) for m in lbl_names]
+        #     lbl = self.mask_preprocess(masks) 
+        #     if self.black_out_non_deck:
+        #         decks = [np.array(d2m(d, imsize)).astype(dtype=np.uint32) for d in lbl_names]
+        #         deck = np.zeros(decks[0].shape)
+        #         deck = sum(decks)[:,:,0]
+        #         deck[deck>0] = 255
+        #         img, lbl = self.black_out_non_deck_fn(img, lbl, deck)
 
-
-        
         return img, lbl
 
-    def deck_intersection(decks):
-        deck = np.ones(decks[0].shape).astype(dtype=np.uint32)
+    def deck_intersection(self, decks):
+        deck = 255 * np.ones(decks[0].shape).astype(dtype=np.int32)
         for d in decks:
-            deck = deck * d
+            deck = deck * d/255
         return deck
+
+    def get_uncertainty_label(self, lbls):
+        new_lbl = np.zeros(lbls[0].shape).astype(dtype=np.int32)
+        for c in range(3):
+            intersection = np.ones(lbls[0].shape)
+            union = np.zeros(lbls[0].shape)
+            for lbl in lbls:
+                intersection *= (lbl==c).astype(dtype=np.uint32)
+                union += (lbl==c).astype(dtype=np.uint32)
+                union = (union>0).astype(dtype=np.uint32)
+            new_lbl[union.astype(bool)] = c
+        return new_lbl
             
     def random_crop(self, x, y=np.array([None]), random_crop_size=None):
         w, h = x.shape[1], x.shape[0]
@@ -253,9 +273,9 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         
 
 class BridgeSeg(BridgeSegBase):
-    def __init__(self, split='train', rcrop=[None, None], use_data_augmentation=False, black_out_non_deck=False, use_class_weight=False, preprocess=False):
+    def __init__(self, split='train', tstrategy=0, rcrop=[None, None], use_data_augmentation=False, black_out_non_deck=False, use_class_weight=False, preprocess=False):
 
-       super(BridgeSeg, self).__init__(split=split, use_data_augmentation=use_data_augmentation, black_out_non_deck=black_out_non_deck, use_class_weight=use_class_weight, preprocess=preprocess) 
+       super(BridgeSeg, self).__init__(split=split, tstrategy=tstrategy, use_data_augmentation=use_data_augmentation, black_out_non_deck=black_out_non_deck, use_class_weight=use_class_weight, preprocess=preprocess) 
        if len(rcrop) == 2:
            self.rcrop = np.array(rcrop)
        else:

@@ -11,15 +11,14 @@ import chainer
 from chainer.training import extensions
 import chainercv
 import fcn
+import pdb
 
 
 here = osp.dirname(osp.abspath(__file__))
 
 
-def get_data(deck_flag, data_augmentation, tstrategy):
-    dataset_train = fcn.datasets.BridgeSeg(split='train')
+def get_data(deck_flag, data_augmentation, tstrategy, xval):
 
-    class_names = dataset_train.class_names
 
     # Include this parameters in main function
     deck_flag = bool(deck_flag) 
@@ -28,8 +27,8 @@ def get_data(deck_flag, data_augmentation, tstrategy):
 
 
 
-    dataset_train = datasets.BridgeSeg(
-        split='trainval',
+    dataset_train = fcn.datasets.BridgeSeg(
+        split='all',
         tstrategy=tstrategy,
         rcrop=[256,256],
         use_class_weight=class_weight_flag,
@@ -37,13 +36,24 @@ def get_data(deck_flag, data_augmentation, tstrategy):
         use_data_augmentation=data_augmentation
     )
     
-    dataset_nocrop = datasets.BridgeSeg(
-        split='trainval',
+    class_names = dataset_train.class_names
+
+    dataset_nocrop = fcn.datasets.BridgeSeg(
+        split='all',
         tstrategy=2,
         use_class_weight=class_weight_flag,
         black_out_non_deck=deck_flag,
         use_data_augmentation=False
     )
+
+    # Apply per channel mean substraction
+    dataset_train = chainer.datasets.TransformDataset(
+        dataset_train, fcn.datasets.transform_lsvrc2012_vgg16)
+#     dataset_valid = chainer.datasets.TransformDataset(
+#         dataset_valid, fcn.datasets.transform_lsvrc2012_vgg16)
+    dataset_nocrop = chainer.datasets.TransformDataset(
+        dataset_nocrop, fcn.datasets.transform_lsvrc2012_vgg16)
+    num_train_samples = len(dataset_train)
 
     if xval>0:
         dataset_cv = chainer.datasets.get_cross_validation_datasets_random(dataset_train, 5, 42)
@@ -58,25 +68,17 @@ def get_data(deck_flag, data_augmentation, tstrategy):
 #         use_data_augmentation=False
 #     )
 
-    # Apply per channel mean substraction
-    dataset_train = chainer.datasets.TransformDataset(
-        dataset_train, fcn.datasets.transform_lsvrc2012_vgg16)
-#     dataset_valid = chainer.datasets.TransformDataset(
-#         dataset_valid, fcn.datasets.transform_lsvrc2012_vgg16)
-    dataset_nocrop = chainer.datasets.TransformDataset(
-        dataset_nocrop, fcn.datasets.transform_lsvrc2012_vgg16)
-    num_train_samples = len(dataset_train)
     
-    # Create iterators
+#     # Create iterators
 #     iter_train = chainer.iterators.SerialIterator(
 #         dataset_train, batch_size=1)
-#     iter_valid = chainer.iterators.SerialIterator(
-#         dataset_valid, batch_size=1, repeat=False, shuffle=False)
+# #     iter_valid = chainer.iterators.SerialIterator(
+# #         dataset_valid, batch_size=1, repeat=False, shuffle=False)
 #     iter_train_nocrop = chainer.iterators.SerialIterator(
 #         dataset_train_nocrop, batch_size=1, repeat=False, shuffle=False)
 
     #return num_train_samples, class_names, iter_train, iter_valid, iter_train_nocrop
-    return num_train_samples, class_names, dataset_train, dataset_cv, dataset_nocrop 
+    return num_train_samples, class_names, dataset_train, dataset_cv, dataset_nocrop, dataset_nocrop_cv 
 
 
 def get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop,
@@ -115,10 +117,10 @@ def get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop,
             iter_valid, model, label_names=class_names),
         trigger=(args.interval_eval, 'iteration'))
 
-    trainer.extend(
-        chainercv.extensions.SemanticSegmentationEvaluator(
-            iter_train_nocrop, model, label_names=class_names),
-        trigger=(args.interval_eval, 'iteration'))
+    # trainer.extend(
+    #     chainercv.extensions.SemanticSegmentationEvaluator(
+    #         iter_train_nocrop, model, label_names=class_names),
+    #     trigger=(args.interval_eval, 'iteration'))
 
     trainer.extend(extensions.snapshot_object(
         target=model, filename='model_best.npz'),
@@ -149,7 +151,7 @@ def main():
     parser.add_argument('-e', '--epochs', type=int, default=100, choices=range(1000), \
                         help='Number of epochs', metavar='range(0...1000)')
     parser.add_argument('-x', '--xval', type=int, default=5)
-    parser.add_argument('-t', '--tstrategy', type=int, default=0, choices=(0,1)
+    parser.add_argument('-t', '--tstrategy', type=int, default=0, choices=(0,1))
     args = parser.parse_args()
 
     args.model = 'FCN32s'
@@ -166,24 +168,25 @@ def main():
 #     num_train_samples, class_names, iter_train, iter_valid, iter_train_nocrop = get_data(args.deck_mask, \
 #                                                                       args.data_augmentation)
 # 
-    num_train_samples, class_names, dataset_train, dataset_cv, dataset_nocrop = get_data(args.deck_mask, \
-                                                                      args.data_augmentation)
+    num_train_samples, class_names, dataset_train, dataset_cv, dataset_nocrop, dataset_nocrop_cv = get_data(args.deck_mask, \
+                                                                      args.data_augmentation, args.tstrategy, args.xval)
     for fold, (train_fold, valid_fold) in enumerate(dataset_cv):
         now = datetime.datetime.now()
         args.timestamp = now.isoformat()
         args.out = osp.join(here, 'logs', now.strftime('%Y%m%d_%H%M%S'), '_'+str(fold))
 
         n_class = len(class_names)
-        args.max_iteration = args.epochs * int((train_samples)*((args.xval-1) * args.xval))
-        args.interval_eval = int((train_samples)*((args.xval-1) * args.xval))
+        train_samples = len(train_fold)
+        args.max_iteration = args.epochs * train_samples
+        args.interval_eval = train_samples
 
-        (train_fold_nocrop, test_fold_nocrop) = dataset_nocrop[fold]
+        (train_fold_nocrop, valid_fold_nocrop) = dataset_nocrop_cv[fold]
         iter_train = chainer.iterators.SerialIterator(
-            train_fold, batch_size=1)
+            train_fold, batch_size=2)
         iter_valid = chainer.iterators.SerialIterator(
-            valid_fold, batch_size=1, repeat=False, shuffle=False)
+            valid_fold_nocrop, batch_size=2, repeat=False, shuffle=False)
         iter_train_nocrop = chainer.iterators.SerialIterator(
-            dataset_train_nocrop, batch_size=1, repeat=False, shuffle=False)
+            train_fold_nocrop, batch_size=2, repeat=False, shuffle=False)
 
         # model
         vgg = fcn.models.VGG16()
