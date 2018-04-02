@@ -14,6 +14,8 @@ def get_xml(filename):
 def remove_deleted_mask(doc):
     damage_list = []
     mask_object = doc['annotation']['object']
+    if not isinstance(mask_object, list):
+        mask_object = [mask_object]
     for damage in mask_object:
         if damage['deleted'] == '0':
             damage_list.append(damage)

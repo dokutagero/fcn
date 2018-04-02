@@ -28,7 +28,7 @@ def get_data(deck_flag, data_augmentation, tstrategy, xval):
 
 
     dataset_train = fcn.datasets.BridgeSeg(
-        split='all',
+        split='all_train',
         tstrategy=tstrategy,
         rcrop=[256,256],
         use_class_weight=class_weight_flag,
@@ -39,7 +39,7 @@ def get_data(deck_flag, data_augmentation, tstrategy, xval):
     class_names = dataset_train.class_names
 
     dataset_nocrop = fcn.datasets.BridgeSeg(
-        split='all',
+        split='all_train',
         tstrategy=2,
         use_class_weight=class_weight_flag,
         black_out_non_deck=deck_flag,
@@ -99,7 +99,7 @@ def get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop,
         trigger=(1, 'epoch')))
     trainer.extend(extensions.PrintReport(
         ['epoch', 'iteration', 'elapsed_time',
-         'main/loss', 'validation/main/miou']))
+         'main/loss', 'validation/main/miou', 'validation_1/main/miou']))
 
     def pred_func(x):
         model(x)
@@ -117,6 +117,10 @@ def get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop,
             iter_valid, model, label_names=class_names),
         trigger=(1, 'epoch'))
 
+    trainer.extend(
+        chainercv.extensions.SemanticSegmentationEvaluator(
+            iter_train_nocrop, model, label_names=class_names),
+        trigger=(1, 'epoch'))
     # trainer.extend(
     #     chainercv.extensions.SemanticSegmentationEvaluator(
     #         iter_train_nocrop, model, label_names=class_names),
@@ -133,7 +137,7 @@ def get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop,
         y_keys=['main/loss'], x_key='epoch',
         file_name='loss.png', trigger=(1, 'epoch')))
     trainer.extend(extensions.PlotReport(
-        y_keys=['validation/main/miou'], x_key='epoch',
+        y_keys=['validation/main/miou', 'validation_1/main/miou'], x_key='epoch',
         file_name='miou.png', trigger=(1, 'epoch')))
 
     return trainer
@@ -173,7 +177,7 @@ def main():
                                                                       args.data_augmentation, args.tstrategy, args.xval)
     now = datetime.datetime.now()
     args.timestamp = now.isoformat()
-    experiment_name = 'da_' + str(args.data_augmentation) + '_ts_' + str(args.tstrategy) + '_lu_' + str(args.learnable)
+    experiment_name = 'fcn32' + '_da_' + str(args.data_augmentation) + '_ts_' + str(args.tstrategy) + '_lu_' + str(args.learnable)
 
     for fold, (train_fold, valid_fold) in enumerate(dataset_cv):
         args.out = osp.join(here, 'logs', experiment_name + '_' + now.strftime('%Y%m%d_%H%M%S'), 'fold_'+str(fold))
@@ -184,12 +188,19 @@ def main():
         args.interval_eval = 2
 
         (train_fold_nocrop, valid_fold_nocrop) = dataset_nocrop_cv[fold]
-        iter_train = chainer.iterators.SerialIterator(
-            train_fold, batch_size=4)
-        iter_valid = chainer.iterators.SerialIterator(
-            valid_fold_nocrop, batch_size=4, repeat=False, shuffle=False)
-        iter_train_nocrop = chainer.iterators.SerialIterator(
-            train_fold_nocrop, batch_size=4, repeat=False, shuffle=False)
+        # iter_train = chainer.iterators.SerialIterator(
+        #     train_fold, batch_size=4)
+        # iter_valid = chainer.iterators.SerialIterator(
+        #     valid_fold_nocrop, batch_size=4, repeat=False, shuffle=False)
+        # iter_train_nocrop = chainer.iterators.SerialIterator(
+        #     train_fold_nocrop, batch_size=4, repeat=False, shuffle=False)
+
+        iter_train = chainer.iterators.MultiprocessIterator(
+                     train_fold, batch_size=4, repeat=True, shuffle=True)
+        iter_valid = chainer.iterators.MultiprocessIterator(
+                     valid_fold_nocrop, batch_size=4, repeat=False, shuffle=False)
+        iter_train_nocrop = chainer.iterators.MultiprocessIterator(
+                     train_fold_nocrop, batch_size=4, repeat=False, shuffle=False)
 
         # model
         vgg = fcn.models.VGG16()

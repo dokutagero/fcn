@@ -67,7 +67,7 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
 
         self.files = collections.defaultdict(list)
         # for split in ['train_xml', 'validation_xml', 'all']:
-        for split in ['all']:
+        for split in ['all_train']:
             imgsets_file = osp.join(DATASET_BRIDGE_DIR, "{}.txt".format(split))
             for did in open(imgsets_file):
                 did = did.strip()
@@ -99,7 +99,7 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         # hsize = int(float(img.size[1]) * 0.5)
         # img = img.resize((wsize, hsize))
         img = np.array(img, dtype=np.uint8)
-        if self.split == 'all':
+        if self.split == 'all_train':
             if self.tstrategy == 0:
                 lbl_file = random.choice(data_file['lbl']) 
 
@@ -115,7 +115,8 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
                 # lbls = [self.color_class_label(np.array(l2m(lbl_name, imsize), dtype=np.int32)) for lbl_name in lbl_names]
                 # lbl = self.get_uncertainty_label(lbls)
                 
-                lbl_file = random.choice(data_file['lbl']) 
+                # lbl_file = random.choice(data_file['lbl']) 
+                lbl_file = data_file['lbl'][0]
 
                 lbl_name = osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', lbl_file)
                 lbl = l2m(lbl_name, imsize)
