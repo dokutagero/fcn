@@ -89,14 +89,14 @@ def get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop,
         iter_train, optimizer, device=args.gpu)
 
     trainer = chainer.training.Trainer(
-        updater, (args.max_iteration, 'iteration'), out=args.out)
+        updater, (args.epochs, 'epoch'), out=args.out)
 
     trainer.extend(fcn.extensions.ParamsReport(args.__dict__))
 
     trainer.extend(extensions.ProgressBar(update_interval=5))
 
     trainer.extend(extensions.LogReport(
-        trigger=(args.interval_print, 'iteration')))
+        trigger=(1, 'epoch')))
     trainer.extend(extensions.PrintReport(
         ['epoch', 'iteration', 'elapsed_time',
          'main/loss', 'validation/main/miou']))
@@ -115,26 +115,26 @@ def get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop,
     trainer.extend(
         chainercv.extensions.SemanticSegmentationEvaluator(
             iter_valid, model, label_names=class_names),
-        trigger=(args.interval_eval, 'iteration'))
+        trigger=(1, 'epoch'))
 
     # trainer.extend(
     #     chainercv.extensions.SemanticSegmentationEvaluator(
     #         iter_train_nocrop, model, label_names=class_names),
     #     trigger=(args.interval_eval, 'iteration'))
 
-    trainer.extend(extensions.snapshot_object(
-        target=model, filename='model_best.npz'),
-        trigger=chainer.training.triggers.MaxValueTrigger(
-            key='validation/main/miou',
-            trigger=(args.interval_eval, 'iteration')))
+    # trainer.extend(extensions.snapshot_object(
+    #     target=model, filename='model_best.npz'),
+    #     trigger=chainer.training.triggers.MaxValueTrigger(
+    #         key='validation/main/miou',
+    #         trigger=(1, 'epoch')))
 
     assert extensions.PlotReport.available()
     trainer.extend(extensions.PlotReport(
-        y_keys=['main/loss'], x_key='iteration',
-        file_name='loss.png', trigger=(args.interval_print, 'iteration')))
+        y_keys=['main/loss'], x_key='epoch',
+        file_name='loss.png', trigger=(1, 'epoch')))
     trainer.extend(extensions.PlotReport(
-        y_keys=['validation/main/miou'], x_key='iteration',
-        file_name='miou.png', trigger=(args.interval_print, 'iteration')))
+        y_keys=['validation/main/miou'], x_key='epoch',
+        file_name='miou.png', trigger=(1, 'epoch')))
 
     return trainer
 
@@ -152,6 +152,7 @@ def main():
                         help='Number of epochs', metavar='range(0...1000)')
     parser.add_argument('-x', '--xval', type=int, default=5)
     parser.add_argument('-t', '--tstrategy', type=int, default=0, choices=(0,1))
+    parser.add_argument('-lu', '--learnable', type=int, default=0, choices=(0,1))
     args = parser.parse_args()
 
     args.model = 'FCN32s'
@@ -159,7 +160,7 @@ def main():
     args.momentum = 0.99
     args.weight_decay = 0.0005
 
-    args.interval_print = 20
+    args.interval_print = 5
 
     #tstrategy is train strategy, 0 for random sample of label and 1 for intersection
     # hardcoded value of 2 is for evaluation.
@@ -170,23 +171,25 @@ def main():
 # 
     num_train_samples, class_names, dataset_train, dataset_cv, dataset_nocrop, dataset_nocrop_cv = get_data(args.deck_mask, \
                                                                       args.data_augmentation, args.tstrategy, args.xval)
+    now = datetime.datetime.now()
+    args.timestamp = now.isoformat()
+    experiment_name = 'da_' + str(args.data_augmentation) + '_ts_' + str(args.tstrategy) + '_lu_' + str(args.learnable)
+
     for fold, (train_fold, valid_fold) in enumerate(dataset_cv):
-        now = datetime.datetime.now()
-        args.timestamp = now.isoformat()
-        args.out = osp.join(here, 'logs', now.strftime('%Y%m%d_%H%M%S'), '_'+str(fold))
+        args.out = osp.join(here, 'logs', experiment_name + '_' + now.strftime('%Y%m%d_%H%M%S'), 'fold_'+str(fold))
 
         n_class = len(class_names)
         train_samples = len(train_fold)
         args.max_iteration = args.epochs * train_samples
-        args.interval_eval = train_samples
+        args.interval_eval = 2
 
         (train_fold_nocrop, valid_fold_nocrop) = dataset_nocrop_cv[fold]
         iter_train = chainer.iterators.SerialIterator(
-            train_fold, batch_size=2)
+            train_fold, batch_size=4)
         iter_valid = chainer.iterators.SerialIterator(
-            valid_fold_nocrop, batch_size=2, repeat=False, shuffle=False)
+            valid_fold_nocrop, batch_size=4, repeat=False, shuffle=False)
         iter_train_nocrop = chainer.iterators.SerialIterator(
-            train_fold_nocrop, batch_size=2, repeat=False, shuffle=False)
+            train_fold_nocrop, batch_size=4, repeat=False, shuffle=False)
 
         # model
         vgg = fcn.models.VGG16()

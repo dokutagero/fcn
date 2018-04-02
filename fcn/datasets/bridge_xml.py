@@ -110,10 +110,18 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
                 lbl = self.color_class_label(lbl)
 
             elif self.tstrategy == 2:
-                lbl_names = [osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', lbl_file) for lbl_file in data_file['lbl']]
-                lbls = [self.color_class_label(np.array(l2m(lbl_name, imsize), dtype=np.int32)) for lbl_name in lbl_names]
-                lbl = self.get_uncertainty_label(lbls)
+                # for now we just use one randomly
+                # lbl_names = [osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', lbl_file) for lbl_file in data_file['lbl']]
+                # lbls = [self.color_class_label(np.array(l2m(lbl_name, imsize), dtype=np.int32)) for lbl_name in lbl_names]
+                # lbl = self.get_uncertainty_label(lbls)
                 
+                lbl_file = random.choice(data_file['lbl']) 
+
+                lbl_name = osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', lbl_file)
+                lbl = l2m(lbl_name, imsize)
+
+                lbl = np.array(lbl, dtype=np.int32)
+                lbl = self.color_class_label(lbl)
             #important: keep this BEFORE black_out_non_deck, as the histogram spreading sometimes causes the black area not to be fully black anymore
             if self.preprocess:
                 img = self.preprocess_fn(img)
