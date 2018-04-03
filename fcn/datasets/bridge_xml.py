@@ -106,16 +106,19 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         img = np.array(img, dtype=np.uint8)
         if self.split == 'train':
             #if self.tstrategy == 0 or self.uncertainty_label == 0:
-            if self.tstrategy == 0:
+            if self.tstrategy == 0 or self.tstrategy == 2:
+                # pdb.set_trace()
                 #lbl_file = random.choice(data_file['lbl']) 
                 lbl_file = data_file['lbl'][0]
+                # print lbl_file
 
                 lbl_name = osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', lbl_file)
+                # pdb.set_trace()
                 lbl = l2m(lbl_name, imsize)
 
                 lbl = np.array(lbl, dtype=np.int32)
                 lbl = self.color_class_label(lbl)
-            if self.tstrategy == 2:
+            if self.uncertainty_label == 1:
                 lbl = self.get_uncertainty_label(data_file, imsize)
                 
 
@@ -232,6 +235,13 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         lbl[deck==0] = -1  #make everything none deck as class -1
         deck = np.repeat(deck[:,:,np.newaxis], 3, axis=2)  #duplicate deck into the 3rd dimension
         img = img * deck.astype('uint8') 
+        if self.split == 'validation' or self.split == 'train' and self.tstrategy==2:
+            xmin = np.min(np.where(deck == 1)[0])
+            xmax = np.max(np.where(deck == 1)[0])
+            ymin = np.min(np.where(deck == 1)[1])
+            ymax = np.max(np.where(deck == 1)[1])
+            lbl = lbl[xmin:xmax+1, ymin:ymax+1]
+            img = img[xmin:xmax+1, ymin:ymax+1, :]
         return img, lbl
 
     def mask_preprocess(self, masks):
