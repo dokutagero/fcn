@@ -17,7 +17,7 @@ import pdb
 here = osp.dirname(osp.abspath(__file__))
 
 
-def get_data(deck_flag, data_augmentation, tstrategy):
+def get_data(deck_flag, data_augmentation, tstrategy, uncertainty):
 
 
     # Include this parameters in main function
@@ -43,7 +43,8 @@ def get_data(deck_flag, data_augmentation, tstrategy):
         tstrategy=2,
         use_class_weight=class_weight_flag,
         black_out_non_deck=deck_flag,
-        use_data_augmentation=False
+        use_data_augmentation=False,
+        uncertainty_label=uncertainty
     )
 
     dataset_train_nocrop = fcn.datasets.BridgeSeg(
@@ -51,7 +52,8 @@ def get_data(deck_flag, data_augmentation, tstrategy):
         tstrategy=2,
         use_class_weight=class_weight_flag,
         black_out_non_deck=deck_flag,
-        use_data_augmentation=False
+        use_data_augmentation=False,
+        uncertainty_label=uncertainty
     )
     # Apply per channel mean substraction
     dataset_train = chainer.datasets.TransformDataset(
@@ -156,6 +158,7 @@ def main():
     parser.add_argument('-x', '--xval', type=int, default=5)
     parser.add_argument('-t', '--tstrategy', type=int, default=0, choices=(0,1))
     parser.add_argument('-lu', '--learnable', type=int, default=0, choices=(0,1))
+    parser.add_argument('-u', '--uncertainty', type=int, default=0, choices(0,1))
     args = parser.parse_args()
 
     args.model = 'FCN32s'
@@ -173,7 +176,7 @@ def main():
 #                                                                       args.data_augmentation)
 # 
     num_train_samples, class_names, dataset_train, dataset_train_nocrop, dataset_valid_nocrop = get_data(args.deck_mask, \
-                                                                      args.data_augmentation, args.tstrategy)
+                                                                      args.data_augmentation, args.tstrategy, args.uncertainty)
     now = datetime.datetime.now()
     args.timestamp = now.isoformat()
     experiment_name = 'nonxval_' + 'fcn32' + '_da_' + str(args.data_augmentation) + '_ts_' + str(args.tstrategy) + '_lu_' + str(args.learnable)
@@ -194,9 +197,9 @@ def main():
     iter_train = chainer.iterators.MultiprocessIterator(
                  dataset_train, batch_size=4, repeat=True, shuffle=True)
     iter_valid = chainer.iterators.MultiprocessIterator(
-                 dataset_valid_nocrop, batch_size=1, n_prefetch = 5, repeat=False, shuffle=False)
+                 dataset_valid_nocrop, batch_size=4, n_prefetch = 5, repeat=False, shuffle=False)
     iter_train_nocrop = chainer.iterators.MultiprocessIterator(
-                 dataset_train_nocrop, batch_size=1, n_prefetch = 5,  repeat=False, shuffle=False)
+                 dataset_train_nocrop, batch_size=4, n_prefetch = 5,  repeat=False, shuffle=False)
 
     # model
     vgg = fcn.models.VGG16()

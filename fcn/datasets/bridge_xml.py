@@ -26,12 +26,13 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
     class_names = np.array(['non-damage', 'delamination', 'rebar_exposure'])
     class_weight_default = np.array([0.3610441, 4.6313269, 69.76223605]) #the weights will be multiplied with the loss value
 
-    def __init__(self, split='train', tstrategy=0,  use_data_augmentation=False, black_out_non_deck=False, use_class_weight=False, preprocess=False):
+    def __init__(self, split='train', uncertainty_label=0, tstrategy=0,  use_data_augmentation=False, black_out_non_deck=False, use_class_weight=False, preprocess=False):
         self.split = split
         self.black_out_non_deck = black_out_non_deck
         self.use_data_augmentation = use_data_augmentation
         self.preprocess = preprocess
         self.tstrategy = tstrategy
+        self.uncertainty_label = uncertainty_label
         #if black_out_non_deck or use_data_augmentation:
             #see below with the class weights
             #self.class_names = np.array(['non-damage', 'delamination', 'rebar_exposure', 'non-deck'])
@@ -114,20 +115,26 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
 
         elif self.split == 'validation':
             # pdb.set_trace()
-            # for now we just use one randomly
-            # lbl_names = [osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', lbl_file) for lbl_file in data_file['lbl']]
-            # lbls = [self.color_class_label(np.array(l2m(lbl_name, imsize), dtype=np.int32)) for lbl_name in lbl_names]
-            # lbl = self.get_uncertainty_label(lbls)
+            if self.uncertainty_label:
+                # for now we just use one randomly
+                lbl_names = [osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', lbl_file) for lbl_file in data_file['lbl']]
+                lbls = [self.color_class_label(np.array(l2m(lbl_name, imsize), dtype=np.int32)) for lbl_name in lbl_names]
+                lbl = self.get_uncertainty_label(lbls)
              
-            # lbl_file = random.choice(data_file['lbl']) 
-            lbl_file = data_file['lbl'][0]
+                for label_file in data_file['lbl']:
+                    lbl_names.append(osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', label_file))
+                masks = [self.color_class_label(l2m(m, imsize)) for m in lbl_names]
+                lbl = self.mask_preprocess(masks) 
+                #lbl_file = random.choice(data_file['lbl']) 
+            else:
+                lbl_file = data_file['lbl'][0]
+                lbl_name = osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', lbl_file)
+                lbl = l2m(lbl_name, imsize)
 
-            lbl_name = osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', lbl_file)
-            lbl = l2m(lbl_name, imsize)
+                lbl = np.array(lbl, dtype=np.int32)
+                lbl = self.color_class_label(lbl)
 
-            lbl = np.array(lbl, dtype=np.int32)
-            lbl = self.color_class_label(lbl)
-            #important: keep this BEFORE black_out_non_deck, as the histogram spreading sometimes causes the black area not to be fully black anymore
+        #important: keep this BEFORE black_out_non_deck, as the histogram spreading sometimes causes the black area not to be fully black anymore
         if self.preprocess:
             img = self.preprocess_fn(img)
 
