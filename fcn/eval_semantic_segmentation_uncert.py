@@ -4,7 +4,7 @@ import numpy as np
 import six
 
 
-def calc_semantic_segmentation_confusion(pred_labels, gt_labels):
+def calc_semantic_segmentation_confusion_uncert(pred_labels, gt_labels):
     """Collect a confusion matrix.
 
     The number of classes :math:`n\_class` is
@@ -71,7 +71,7 @@ def calc_semantic_segmentation_confusion(pred_labels, gt_labels):
     return confusion
 
 
-def calc_semantic_segmentation_iou(confusion):
+def calc_semantic_segmentation_iou_uncert(confusion):
     """Calculate Intersection over Union with a given confusion matrix.
 
     The definition of Intersection over Union (IoU) is as follows,
@@ -104,7 +104,7 @@ def calc_semantic_segmentation_iou(confusion):
     return iou
 
 
-def eval_semantic_segmentation(pred_labels, gt_labels):
+def eval_semantic_segmentation_uncert(pred_labels, gt_labels):
     """Evaluate metrics used in Semantic Segmentation.
 
     This function calculates Intersection over Union (IoU), Pixel Accuracy

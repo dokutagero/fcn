@@ -117,15 +117,26 @@ def get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop,
     #         class_names=class_names, device=args.gpu, shape=(4, 2)),
     #     trigger=(args.interval_eval, 'iteration'))
 
-    trainer.extend(
-        chainercv.extensions.SemanticSegmentationEvaluator(
-            iter_valid, model, label_names=class_names),
-        trigger=(1, 'epoch'))
+    if args.uncertainty == 0:
+        trainer.extend(
+            chainercv.extensions.SemanticSegmentationEvaluator(
+                iter_valid, model, label_names=class_names),
+            trigger=(1, 'epoch'))
 
-    trainer.extend(
-        chainercv.extensions.SemanticSegmentationEvaluator(
-            iter_train_nocrop, model, label_names=class_names),
-        trigger=(1, 'epoch'))
+        trainer.extend(
+            chainercv.extensions.SemanticSegmentationEvaluator(
+                iter_train_nocrop, model, label_names=class_names),
+            trigger=(1, 'epoch'))
+    else:
+        trainer.extend(
+            fcn.SemanticSegmentationUncertEvaluator(
+                iter_valid, model, label_names=class_names),
+            trigger=(1, 'epoch'))
+
+        trainer.extend(
+            fcn.SemanticSegmentationUncertEvaluator(
+                iter_train_nocrop, model, label_names=class_names),
+            trigger=(1, 'epoch'))
 
     # trainer.extend(extensions.snapshot_object(
     #     target=model, filename='model_best.npz'),
@@ -158,7 +169,7 @@ def main():
     parser.add_argument('-x', '--xval', type=int, default=5)
     parser.add_argument('-t', '--tstrategy', type=int, default=0, choices=(0,1))
     parser.add_argument('-lu', '--learnable', type=int, default=0, choices=(0,1))
-    parser.add_argument('-u', '--uncertainty', type=int, default=0, choices(0,1))
+    parser.add_argument('-u', '--uncertainty', type=int, default=0, choices=(0,1))
     args = parser.parse_args()
 
     args.model = 'FCN32s'
@@ -179,7 +190,7 @@ def main():
                                                                       args.data_augmentation, args.tstrategy, args.uncertainty)
     now = datetime.datetime.now()
     args.timestamp = now.isoformat()
-    experiment_name = 'nonxval_' + 'fcn32' + '_da_' + str(args.data_augmentation) + '_ts_' + str(args.tstrategy) + '_lu_' + str(args.learnable)
+    experiment_name = 'nonxval_' + 'fcn32' + '_uncertainty_' + str(args.uncertainty) + '_da_' + str(args.data_augmentation) + '_ts_' + str(args.tstrategy) + '_lu_' + str(args.learnable)
 
     args.out = osp.join(here, 'logs', experiment_name + '_' + now.strftime('%Y%m%d_%H%M%S'))
     n_class = len(class_names)

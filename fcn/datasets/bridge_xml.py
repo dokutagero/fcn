@@ -293,7 +293,7 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         
 
 class BridgeSeg(BridgeSegBase):
-    def __init__(self, split='train', tstrategy=0, rcrop=[None, None], use_data_augmentation=False, black_out_non_deck=False, use_class_weight=False, preprocess=False):
+    def __init__(self, split='train', uncertainty_label=0, tstrategy=0, rcrop=[None, None], use_data_augmentation=False, black_out_non_deck=False, use_class_weight=False, preprocess=False):
 
        super(BridgeSeg, self).__init__(split=split, tstrategy=tstrategy, use_data_augmentation=use_data_augmentation, black_out_non_deck=black_out_non_deck, use_class_weight=use_class_weight, preprocess=preprocess) 
        if len(rcrop) == 2:

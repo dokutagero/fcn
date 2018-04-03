@@ -4,11 +4,12 @@ import numpy as np
 from chainer import reporter
 import chainer.training.extensions
 
-from chainercv.evaluations import eval_semantic_segmentation
+#from chainercv.evaluations import eval_semantic_segmentation
+from .eval_semantic_segmentation_uncert import eval_semantic_segmentation_uncert
 from chainercv.utils import apply_prediction_to_iterator
 
 
-class SemanticSegmentationEvaluator(chainer.training.extensions.Evaluator):
+class SemanticSegmentationUncertEvaluator(chainer.training.extensions.Evaluator):
 
     """An extension that evaluates a semantic segmentation model.
 
