@@ -17,7 +17,7 @@ import pdb
 here = osp.dirname(osp.abspath(__file__))
 
 
-def get_data(deck_flag, data_augmentation, tstrategy, xval):
+def get_data(deck_flag, data_augmentation, tstrategy):
 
 
     # Include this parameters in main function
@@ -27,8 +27,8 @@ def get_data(deck_flag, data_augmentation, tstrategy, xval):
 
 
 
-    dataset_train = fcn.datasets.BridgeSegXval(
-        split='all_train',
+    dataset_train = fcn.datasets.BridgeSeg(
+        split='train',
         tstrategy=tstrategy,
         rcrop=[256,256],
         use_class_weight=class_weight_flag,
@@ -38,28 +38,31 @@ def get_data(deck_flag, data_augmentation, tstrategy, xval):
     
     class_names = dataset_train.class_names
 
-    dataset_nocrop = fcn.datasets.BridgeSegXval(
-        split='all_train',
+    dataset_valid_nocrop = fcn.datasets.BridgeSeg(
+        split='validation',
         tstrategy=2,
         use_class_weight=class_weight_flag,
         black_out_non_deck=deck_flag,
         use_data_augmentation=False
     )
 
+    dataset_train_nocrop = fcn.datasets.BridgeSeg(
+        split='train',
+        tstrategy=2,
+        use_class_weight=class_weight_flag,
+        black_out_non_deck=deck_flag,
+        use_data_augmentation=False
+    )
     # Apply per channel mean substraction
     dataset_train = chainer.datasets.TransformDataset(
         dataset_train, fcn.datasets.transform_lsvrc2012_vgg16)
-#     dataset_valid = chainer.datasets.TransformDataset(
-#         dataset_valid, fcn.datasets.transform_lsvrc2012_vgg16)
-    dataset_nocrop = chainer.datasets.TransformDataset(
-        dataset_nocrop, fcn.datasets.transform_lsvrc2012_vgg16)
+    dataset_valid_nocrop = chainer.datasets.TransformDataset(
+        dataset_valid_nocrop, fcn.datasets.transform_lsvrc2012_vgg16)
+    dataset_train_nocrop = chainer.datasets.TransformDataset(
+        dataset_train_nocrop, fcn.datasets.transform_lsvrc2012_vgg16)
+
     num_train_samples = len(dataset_train)
 
-    if xval>0:
-        dataset_cv = chainer.datasets.get_cross_validation_datasets_random(dataset_train, 5, 42)
-        dataset_nocrop_cv = chainer.datasets.get_cross_validation_datasets_random(dataset_nocrop, 5, 42)
-
-    
 
 #     dataset_valid = datasets.BridgeSeg(
 #         split='validation',
@@ -78,7 +81,7 @@ def get_data(deck_flag, data_augmentation, tstrategy, xval):
 #         dataset_train_nocrop, batch_size=1, repeat=False, shuffle=False)
 
     #return num_train_samples, class_names, iter_train, iter_valid, iter_train_nocrop
-    return num_train_samples, class_names, dataset_train, dataset_cv, dataset_nocrop, dataset_nocrop_cv 
+    return num_train_samples, class_names, dataset_train, dataset_train_nocrop, dataset_valid_nocrop
 
 
 def get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop,
@@ -121,10 +124,6 @@ def get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop,
         chainercv.extensions.SemanticSegmentationEvaluator(
             iter_train_nocrop, model, label_names=class_names),
         trigger=(1, 'epoch'))
-    # trainer.extend(
-    #     chainercv.extensions.SemanticSegmentationEvaluator(
-    #         iter_train_nocrop, model, label_names=class_names),
-    #     trigger=(args.interval_eval, 'iteration'))
 
     # trainer.extend(extensions.snapshot_object(
     #     target=model, filename='model_best.npz'),
@@ -173,60 +172,56 @@ def main():
 #     num_train_samples, class_names, iter_train, iter_valid, iter_train_nocrop = get_data(args.deck_mask, \
 #                                                                       args.data_augmentation)
 # 
-    num_train_samples, class_names, dataset_train, dataset_cv, dataset_nocrop, dataset_nocrop_cv = get_data(args.deck_mask, \
-                                                                      args.data_augmentation, args.tstrategy, args.xval)
+    num_train_samples, class_names, dataset_train, dataset_train_nocrop, dataset_valid_nocrop = get_data(args.deck_mask, \
+                                                                      args.data_augmentation, args.tstrategy)
     now = datetime.datetime.now()
     args.timestamp = now.isoformat()
-    experiment_name = 'fcn32' + '_da_' + str(args.data_augmentation) + '_ts_' + str(args.tstrategy) + '_lu_' + str(args.learnable)
+    experiment_name = 'nonxval_' + 'fcn32' + '_da_' + str(args.data_augmentation) + '_ts_' + str(args.tstrategy) + '_lu_' + str(args.learnable)
 
-    for fold, (train_fold, valid_fold) in enumerate(dataset_cv):
-        args.out = osp.join(here, 'logs', experiment_name + '_' + now.strftime('%Y%m%d_%H%M%S'), 'fold_'+str(fold))
+    args.out = osp.join(here, 'logs', experiment_name + '_' + now.strftime('%Y%m%d_%H%M%S'))
+    n_class = len(class_names)
+    train_samples = len(dataset_train)
+    args.max_iteration = args.epochs * train_samples
+    args.interval_eval = 2
 
-        n_class = len(class_names)
-        train_samples = len(train_fold)
-        args.max_iteration = args.epochs * train_samples
-        args.interval_eval = 2
+    # iter_train = chainer.iterators.SerialIterator(
+    #     train_fold, batch_size=4)
+    # iter_valid = chainer.iterators.SerialIterator(
+    #     valid_fold_nocrop, batch_size=4, repeat=False, shuffle=False)
+    # iter_train_nocrop = chainer.iterators.SerialIterator(
+    #     train_fold_nocrop, batch_size=4, repeat=False, shuffle=False)
 
-        (train_fold_nocrop, valid_fold_nocrop) = dataset_nocrop_cv[fold]
-        # iter_train = chainer.iterators.SerialIterator(
-        #     train_fold, batch_size=4)
-        # iter_valid = chainer.iterators.SerialIterator(
-        #     valid_fold_nocrop, batch_size=4, repeat=False, shuffle=False)
-        # iter_train_nocrop = chainer.iterators.SerialIterator(
-        #     train_fold_nocrop, batch_size=4, repeat=False, shuffle=False)
+    iter_train = chainer.iterators.MultiprocessIterator(
+                 dataset_train, batch_size=4, repeat=True, shuffle=True)
+    iter_valid = chainer.iterators.MultiprocessIterator(
+                 dataset_valid_nocrop, batch_size=1, n_prefetch = 5, repeat=False, shuffle=False)
+    iter_train_nocrop = chainer.iterators.MultiprocessIterator(
+                 dataset_train_nocrop, batch_size=1, n_prefetch = 5,  repeat=False, shuffle=False)
 
-        iter_train = chainer.iterators.MultiprocessIterator(
-                     train_fold, batch_size=4, repeat=True, shuffle=True)
-        iter_valid = chainer.iterators.MultiprocessIterator(
-                     valid_fold_nocrop, batch_size=4, repeat=False, shuffle=False)
-        iter_train_nocrop = chainer.iterators.MultiprocessIterator(
-                     train_fold_nocrop, batch_size=4, repeat=False, shuffle=False)
+    # model
+    vgg = fcn.models.VGG16()
+    chainer.serializers.load_npz(vgg.pretrained_model, vgg)
+    model = fcn.models.FCN32s(n_class=n_class)
+    model.init_from_vgg16(vgg)
+    if args.gpu >= 0:
+        chainer.cuda.get_device(args.gpu).use()
+        model.to_gpu()
 
-        # model
-        vgg = fcn.models.VGG16()
-        chainer.serializers.load_npz(vgg.pretrained_model, vgg)
-        model = fcn.models.FCN32s(n_class=n_class)
-        model.init_from_vgg16(vgg)
+    # optimizer
+    optimizer = chainer.optimizers.MomentumSGD(
+        lr=args.lr, momentum=args.momentum)
+    optimizer.setup(model)
+    optimizer.add_hook(chainer.optimizer.WeightDecay(rate=args.weight_decay))
+    for p in model.params():
+        if p.name == 'b':
+            p.update_rule = chainer.optimizers.momentum_sgd.MomentumSGDRule(
+               lr=optimizer.lr * 2, momentum=0)
+    model.upscore.disable_update()
 
-        if args.gpu >= 0:
-            chainer.cuda.get_device(args.gpu).use()
-            model.to_gpu()
-
-        # optimizer
-        optimizer = chainer.optimizers.MomentumSGD(
-            lr=args.lr, momentum=args.momentum)
-        optimizer.setup(model)
-        optimizer.add_hook(chainer.optimizer.WeightDecay(rate=args.weight_decay))
-        for p in model.params():
-            if p.name == 'b':
-                p.update_rule = chainer.optimizers.momentum_sgd.MomentumSGDRule(
-                    lr=optimizer.lr * 2, momentum=0)
-        model.upscore.disable_update()
-
-        # trainer
-        trainer = get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop,
-                              class_names, args)
-        trainer.run()
+    # trainer
+    trainer = get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop,
+                          class_names, args)
+    trainer.run()
 
 
 if __name__ == '__main__':

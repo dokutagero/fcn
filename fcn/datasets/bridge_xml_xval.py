@@ -21,7 +21,7 @@ import pdb
 DATASET_BRIDGE_DIR = osp.expanduser('/root/bridge_dataset/')
 # DATASET_BRIDGE_DIR = osp.expanduser('/home/dokutagero/repos/dataset_bridge/')
 
-class BridgeSegBase(chainer.dataset.DatasetMixin):
+class BridgeSegBaseXval(chainer.dataset.DatasetMixin):
 
     class_names = np.array(['non-damage', 'delamination', 'rebar_exposure'])
     class_weight_default = np.array([0.3610441, 4.6313269, 69.76223605]) #the weights will be multiplied with the loss value
@@ -67,19 +67,17 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
 
         self.files = collections.defaultdict(list)
         # for split in ['train_xml', 'validation_xml', 'all']:
-        for split in ['train', 'validation']:
+        for split in ['all_train']:
             imgsets_file = osp.join(DATASET_BRIDGE_DIR, "{}.txt".format(split))
             for did in open(imgsets_file):
                 did = did.strip()
                 img_file = osp.join(DATASET_BRIDGE_DIR, 'bridge_images/', '{}.jpg'.format(did))
-                #lbl_files = [did.split('/')[-2]+'/'+f for f in listdir(osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', did.split('/')[-2])) if f.startswith(did.split('/')[-1])]
-                lbl_files = [DATASET_BRIDGE_DIR+'bridge_masks_total/' + did +'_'+num+'.xml' for num in ['1', '2', '3']]
+                lbl_files = [did.split('/')[-2]+'/'+f for f in listdir(osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', did.split('/')[-2])) if f.startswith(did.split('/')[-1])]
                 deck_files = ''
 
                 if self.black_out_non_deck:
                     # deck_file = osp.join(DATASET_BRIDGE_DIR, 'deck_masks/', '{}.png'.format(did))
-                    # deck_files = [did.split('/')[-2]+'/'+f for f in listdir(osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', did.split('/')[-2])) if f.startswith(did.split('/')[-1])]
-                    deck_files = lbl_files
+                    deck_files = [did.split('/')[-2]+'/'+f for f in listdir(osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', did.split('/')[-2])) if f.startswith(did.split('/')[-1])]
 
                 # print(deck_files)
                 self.files[split].append({
@@ -101,10 +99,9 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         # hsize = int(float(img.size[1]) * 0.5)
         # img = img.resize((wsize, hsize))
         img = np.array(img, dtype=np.uint8)
-        if self.split == 'train':
-            if self.tstrategy == 0 or self.tstrategy == 2:
-                #lbl_file = random.choice(data_file['lbl']) 
-                lbl_file = data_file['lbl'][0]
+        if self.split == 'all_train':
+            if self.tstrategy == 0:
+                lbl_file = random.choice(data_file['lbl']) 
 
                 lbl_name = osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', lbl_file)
                 lbl = l2m(lbl_name, imsize)
@@ -112,49 +109,48 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
                 lbl = np.array(lbl, dtype=np.int32)
                 lbl = self.color_class_label(lbl)
 
-        elif self.split == 'validation':
-            # pdb.set_trace()
-            # for now we just use one randomly
-            # lbl_names = [osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', lbl_file) for lbl_file in data_file['lbl']]
-            # lbls = [self.color_class_label(np.array(l2m(lbl_name, imsize), dtype=np.int32)) for lbl_name in lbl_names]
-            # lbl = self.get_uncertainty_label(lbls)
-             
-            # lbl_file = random.choice(data_file['lbl']) 
-            lbl_file = data_file['lbl'][0]
+            elif self.tstrategy == 2:
+                # for now we just use one randomly
+                # lbl_names = [osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', lbl_file) for lbl_file in data_file['lbl']]
+                # lbls = [self.color_class_label(np.array(l2m(lbl_name, imsize), dtype=np.int32)) for lbl_name in lbl_names]
+                # lbl = self.get_uncertainty_label(lbls)
+                
+                # lbl_file = random.choice(data_file['lbl']) 
+                lbl_file = data_file['lbl'][0]
 
-            lbl_name = osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', lbl_file)
-            lbl = l2m(lbl_name, imsize)
+                lbl_name = osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', lbl_file)
+                lbl = l2m(lbl_name, imsize)
 
-            lbl = np.array(lbl, dtype=np.int32)
-            lbl = self.color_class_label(lbl)
+                lbl = np.array(lbl, dtype=np.int32)
+                lbl = self.color_class_label(lbl)
             #important: keep this BEFORE black_out_non_deck, as the histogram spreading sometimes causes the black area not to be fully black anymore
-        if self.preprocess:
-            img = self.preprocess_fn(img)
+            if self.preprocess:
+                img = self.preprocess_fn(img)
 
-        if self.black_out_non_deck:
-            #imsize = img.size
-            deck_names = [osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', label_file) for label_file in data_file['deck']]
-            decks = [np.array(d2m(d, imsize)).astype(dtype=np.int32) for d in deck_names]
-            deck = self.deck_intersection(decks)
-            # we get three identical channels
-            # probably can change this since we duplicate them in black out func
-            deck = deck[:,:,0]
-            # deck = np.zeros(decks[0].shape)
-            # deck = sum(decks)[:,:,0]
-            # deck[deck>0] = 255
-            img, lbl = self.black_out_non_deck_fn(img, lbl, deck)
+            if self.black_out_non_deck:
+                #imsize = img.size
+                deck_names = [osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', label_file) for label_file in data_file['deck']]
+                decks = [np.array(d2m(d, imsize)).astype(dtype=np.int32) for d in deck_names]
+                deck = self.deck_intersection(decks)
+                # we get three identical channels
+                # probably can change this since we duplicate them in black out func
+                deck = deck[:,:,0]
+                # deck = np.zeros(decks[0].shape)
+                # deck = sum(decks)[:,:,0]
+                # deck[deck>0] = 255
+                img, lbl = self.black_out_non_deck_fn(img, lbl, deck)
 
 
-        if self.rcrop.any() != None:
-            img,lbl = self.random_crop(img,lbl, self.rcrop)
+            if self.rcrop.any() != None:
+                img,lbl = self.random_crop(img,lbl, self.rcrop)
 
-        if self.use_data_augmentation:
-            lbl+=1 #imaug library pads with 0. We want the label to be padded with 'non-deck', which has the label -1, hence this cheap hack
-            img, lbl = self.augment_image(img,lbl)
-            lbl-=1
-            #if np.unique(lbl).shape[0] > len(self.class_names):
-            if np.unique(lbl).shape[0] > len(self.class_names)+1: #+1 because we add -1 as a label, whcih doesnt have a class name
-                print('WARNING: someting is odd about the number of labeled classes in this image, the are {} (label: {})'.format(np.unique(lbl), lbl_file))
+            if self.use_data_augmentation:
+                lbl+=1 #imaug library pads with 0. We want the label to be padded with 'non-deck', which has the label -1, hence this cheap hack
+                img, lbl = self.augment_image(img,lbl)
+                lbl-=1
+                #if np.unique(lbl).shape[0] > len(self.class_names):
+                if np.unique(lbl).shape[0] > len(self.class_names)+1: #+1 because we add -1 as a label, whcih doesnt have a class name
+                    print('WARNING: someting is odd about the number of labeled classes in this image, the are {} (label: {})'.format(np.unique(lbl), lbl_file))
 
 
         # elif self.split == 'validation_xml':
@@ -285,7 +281,7 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
 
         
 
-class BridgeSeg(BridgeSegBase):
+class BridgeSegXval(BridgeSegBaseXval):
     def __init__(self, split='train', tstrategy=0, rcrop=[None, None], use_data_augmentation=False, black_out_non_deck=False, use_class_weight=False, preprocess=False):
 
        super(BridgeSeg, self).__init__(split=split, tstrategy=tstrategy, use_data_augmentation=use_data_augmentation, black_out_non_deck=black_out_non_deck, use_class_weight=use_class_weight, preprocess=preprocess) 
