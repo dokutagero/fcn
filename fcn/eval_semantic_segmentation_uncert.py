@@ -2,6 +2,7 @@ from __future__ import division
 
 import numpy as np
 import six
+import pdb
 
 
 def calc_semantic_segmentation_confusion_uncert(pred_labels, gt_labels):
@@ -36,6 +37,7 @@ def calc_semantic_segmentation_confusion_uncert(pred_labels, gt_labels):
 
     n_class = 0
     confusion = np.zeros((n_class, n_class*2), dtype=np.int64)
+    # pdb.set_trace()
     # mc = multichannel
     for pred_label, gt_label_mc in six.moves.zip(pred_labels, gt_labels):
         for channel in range(gt_label_mc.shape[-1]):
@@ -62,7 +64,7 @@ def calc_semantic_segmentation_confusion_uncert(pred_labels, gt_labels):
             confusion += np.bincount(
                 n_class * gt_label[mask].astype(int) +
                 pred_label_flat[mask], minlength=(n_class**2)).reshape((n_class, n_class))
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
 
     for iter_ in (pred_labels, gt_labels):
         # This code assumes any iterator does not contain None as its items.
@@ -175,9 +177,9 @@ def eval_semantic_segmentation_uncert(pred_labels, gt_labels):
     # Evaluation code is based on
     # https://github.com/shelhamer/fcn.berkeleyvision.org/blob/master/
     # score.py#L37
-    confusion = calc_semantic_segmentation_confusion(
+    confusion = calc_semantic_segmentation_confusion_uncert(
         pred_labels, gt_labels)
-    iou = calc_semantic_segmentation_iou(confusion)
+    iou = calc_semantic_segmentation_iou_uncert(confusion)
     # pixel_accuracy = np.diag(confusion).sum() / confusion.sum()
     # class_accuracy = np.diag(confusion) / np.sum(confusion, axis=1)
 

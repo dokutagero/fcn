@@ -66,7 +66,7 @@ class SemanticSegmentationUncertEvaluator(chainer.training.extensions.Evaluator)
     priority = chainer.training.PRIORITY_WRITER
 
     def __init__(self, iterator, target, label_names=None):
-        super(SemanticSegmentationEvaluator, self).__init__(
+        super(SemanticSegmentationUncertEvaluator, self).__init__(
             iterator, target)
         self.label_names = label_names
 
@@ -88,21 +88,25 @@ class SemanticSegmentationUncertEvaluator(chainer.training.extensions.Evaluator)
         pred_labels, = pred_values
         gt_labels, = gt_values
 
-        result = eval_semantic_segmentation(pred_labels, gt_labels)
+        result = eval_semantic_segmentation_uncert(pred_labels, gt_labels)
 
-        report = {'miou': result['miou'],
-                  'pixel_accuracy': result['pixel_accuracy'],
-                  'mean_class_accuracy': result['mean_class_accuracy']}
+        # report = {'miou': result['miou'],
+        #           'pixel_accuracy': result['pixel_accuracy'],
+        #           'mean_class_accuracy': result['mean_class_accuracy']}
+
+        report = {'miou': result['miou']}
+        #           'pixel_accuracy': result['pixel_accuracy'],
+        #           'mean_class_accuracy': result['mean_class_accuracy']}
 
         if self.label_names is not None:
             for l, label_name in enumerate(self.label_names):
                 try:
                     report['iou/{:s}'.format(label_name)] = result['iou'][l]
-                    report['class_accuracy/{:s}'.format(label_name)] =\
-                        result['class_accuracy'][l]
+                    #report['class_accuracy/{:s}'.format(label_name)] =\
+                    #    result['class_accuracy'][l]
                 except IndexError:
                     report['iou/{:s}'.format(label_name)] = np.nan
-                    report['class_accuracy/{:s}'.format(label_name)] = np.nan
+                    #report['class_accuracy/{:s}'.format(label_name)] = np.nan
 
         observation = dict()
         with reporter.report_scope(observation):

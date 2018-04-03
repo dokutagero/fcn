@@ -93,6 +93,8 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         return len(self.files[self.split])
 
     def get_example(self, index):
+        # if self.uncertainty_label == 1:
+        #     pdb.set_trace()
         data_file = self.files[self.split][index]
         img_file = data_file['img']
         # piexif.remove(img_file)
@@ -103,7 +105,8 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         # img = img.resize((wsize, hsize))
         img = np.array(img, dtype=np.uint8)
         if self.split == 'train':
-            if self.tstrategy == 0 or self.tstrategy == 2:
+            #if self.tstrategy == 0 or self.uncertainty_label == 0:
+            if self.tstrategy == 0:
                 #lbl_file = random.choice(data_file['lbl']) 
                 lbl_file = data_file['lbl'][0]
 
@@ -112,20 +115,14 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
 
                 lbl = np.array(lbl, dtype=np.int32)
                 lbl = self.color_class_label(lbl)
+            if self.tstrategy == 2:
+                lbl = self.get_uncertainty_label(data_file, imsize)
+                
 
         elif self.split == 'validation':
             # pdb.set_trace()
             if self.uncertainty_label:
-                # for now we just use one randomly
-                lbl_names = [osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', lbl_file) for lbl_file in data_file['lbl']]
-                lbls = [self.color_class_label(np.array(l2m(lbl_name, imsize), dtype=np.int32)) for lbl_name in lbl_names]
-                lbl = self.get_uncertainty_label(lbls)
-             
-                for label_file in data_file['lbl']:
-                    lbl_names.append(osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', label_file))
-                masks = [self.color_class_label(l2m(m, imsize)) for m in lbl_names]
-                lbl = self.mask_preprocess(masks) 
-                #lbl_file = random.choice(data_file['lbl']) 
+                lbl = self.get_uncertainty_label(data_file, imsize)
             else:
                 lbl_file = data_file['lbl'][0]
                 lbl_name = osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', lbl_file)
@@ -187,17 +184,14 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
             deck = deck * d/255
         return deck
 
-    def get_uncertainty_label(self, lbls):
-        new_lbl = np.zeros(lbls[0].shape).astype(dtype=np.int32)
-        for c in range(3):
-            intersection = np.ones(lbls[0].shape)
-            union = np.zeros(lbls[0].shape)
-            for lbl in lbls:
-                intersection *= (lbl==c).astype(dtype=np.uint32)
-                union += (lbl==c).astype(dtype=np.uint32)
-                union = (union>0).astype(dtype=np.uint32)
-            new_lbl[union.astype(bool)] = c
-        return new_lbl
+    def get_uncertainty_label(self, data_file, imsize):
+        # pdb.set_trace()
+        lbl_names = []
+        for label_file in data_file['lbl']:
+            lbl_names.append(osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', label_file))
+            masks = [self.color_class_label(l2m(m, imsize)) for m in lbl_names]
+            lbl = self.mask_preprocess(masks) 
+        return lbl
             
     def random_crop(self, x, y=np.array([None]), random_crop_size=None):
         w, h = x.shape[1], x.shape[0]
@@ -241,6 +235,7 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         return img, lbl
 
     def mask_preprocess(self, masks):
+        # pdb.set_trace()
 
         new_mask = -1 * np.ones((masks[0].shape[0], masks[0].shape[1], len(self.class_names)), dtype=np.int32)
         for c in range(len(self.class_names)):
@@ -295,7 +290,7 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
 class BridgeSeg(BridgeSegBase):
     def __init__(self, split='train', uncertainty_label=0, tstrategy=0, rcrop=[None, None], use_data_augmentation=False, black_out_non_deck=False, use_class_weight=False, preprocess=False):
 
-       super(BridgeSeg, self).__init__(split=split, tstrategy=tstrategy, use_data_augmentation=use_data_augmentation, black_out_non_deck=black_out_non_deck, use_class_weight=use_class_weight, preprocess=preprocess) 
+       super(BridgeSeg, self).__init__(split=split, uncertainty_label=uncertainty_label, tstrategy=tstrategy, use_data_augmentation=use_data_augmentation, black_out_non_deck=black_out_non_deck, use_class_weight=use_class_weight, preprocess=preprocess) 
        if len(rcrop) == 2:
            self.rcrop = np.array(rcrop)
        else:

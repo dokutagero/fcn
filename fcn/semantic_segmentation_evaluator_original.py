@@ -4,8 +4,7 @@ import numpy as np
 from chainer import reporter
 import chainer.training.extensions
 
-#from chainercv.evaluations import eval_semantic_segmentation
-from .eval_semantic_segmentation_uncert import eval_semantic_segmentation_uncert
+from chainercv.evaluations import eval_semantic_segmentation
 from chainercv.utils import apply_prediction_to_iterator
 
 

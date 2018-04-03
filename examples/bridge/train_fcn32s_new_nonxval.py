@@ -33,7 +33,8 @@ def get_data(deck_flag, data_augmentation, tstrategy, uncertainty):
         rcrop=[256,256],
         use_class_weight=class_weight_flag,
         black_out_non_deck=deck_flag,
-        use_data_augmentation=data_augmentation
+        use_data_augmentation=data_augmentation,
+        uncertainty_label=0
     )
     
     class_names = dataset_train.class_names
