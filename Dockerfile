@@ -8,18 +8,10 @@ RUN apt-get update -y && \
     python-setuptools \
     python-wheel \
     git \
-
-RUN pip install -U pip
-RUN pip install Cython
-RUN pip install git+https://github.com/cupy/cupy.git
-RUN pip install git+https://github.com/chainer/chainer.git
-RUN pip install gdown tqdm scipy matplotlib pandas piexif scikit-learn scikit-image imgaug chainerui chainercv, xmltodict glances nvidia-ml-py3
-
-# OpenCV
-RUN apt-get install -y \
+    vim-nox \
+    # OpenCV
     build-essential \
     cmake \
-    git \
     wget \
     unzip \
     yasm \
@@ -34,6 +26,12 @@ RUN apt-get install -y \
     libavformat-dev \
     libpq-dev && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
+
+RUN pip install -U pip
+RUN pip install Cython
+RUN pip install git+https://github.com/cupy/cupy.git
+RUN pip install git+https://github.com/chainer/chainer.git
+RUN pip install gdown tqdm scipy matplotlib pandas piexif scikit-learn scikit-image imgaug chainerui chainercv xmltodict glances nvidia-ml-py3
 
 WORKDIR /
 RUN wget https://github.com/opencv/opencv/archive/3.2.0.zip \
@@ -61,9 +59,5 @@ RUN wget https://github.com/opencv/opencv/archive/3.2.0.zip \
 && make install \
 && rm /3.2.0.zip \
 && rm -r /opencv-3.2.0
-
-# Misc installs
-RUN apt install vim
-
 
 WORKDIR /root
