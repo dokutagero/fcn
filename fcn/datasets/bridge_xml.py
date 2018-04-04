@@ -16,6 +16,7 @@ from .. import data
 
 from scripts import label2mask as l2m
 from scripts import deck2mask as d2m
+import pdb
 
 DATASET_BRIDGE_DIR = osp.expanduser('/root/bridge_dataset/')
 # DATASET_BRIDGE_DIR = osp.expanduser('/home/dokutagero/repos/dataset_bridge/')
@@ -122,8 +123,8 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
                 
 
         elif self.split == 'validation':
-            # pdb.set_trace()
             if self.uncertainty_label:
+                print(data_file)
                 lbl = self.get_uncertainty_label(data_file, imsize)
             else:
                 lbl_file = data_file['lbl'][0]
@@ -191,8 +192,8 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         lbl_names = []
         for label_file in data_file['lbl']:
             lbl_names.append(osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', label_file))
-            masks = [self.color_class_label(l2m(m, imsize)) for m in lbl_names]
-            lbl = self.mask_preprocess(masks) 
+        masks = [self.color_class_label(l2m(m, imsize)) for m in lbl_names]
+        lbl = self.mask_preprocess(masks) 
         return lbl
             
     def random_crop(self, x, y=np.array([None]), random_crop_size=None):
@@ -257,7 +258,6 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         return img, lbl
 
     def mask_preprocess(self, masks):
-        # pdb.set_trace()
 
         new_mask = -1 * np.ones((masks[0].shape[0], masks[0].shape[1], len(self.class_names)), dtype=np.int32)
         for c in range(len(self.class_names)):
@@ -268,7 +268,7 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
                     intersection = np.zeros(mask.shape)
                     continue
                 intersection *= (mask==c).astype(dtype=np.uint32)
-                union += ((mask==c).astype(dtype=np.uint32))
+                union += (mask==c).astype(dtype=np.uint32)
                 union = (union>0).astype(dtype=np.uint32)
             new_mask[:, :, c][(1-union) == 1]= (c + len(self.class_names))
             new_mask[:, :, c][intersection == 1] = c

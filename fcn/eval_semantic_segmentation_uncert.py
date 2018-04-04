@@ -37,10 +37,10 @@ def calc_semantic_segmentation_confusion_uncert(pred_labels, gt_labels):
 
     n_class = 0
     confusion = np.zeros((n_class, n_class*2), dtype=np.int64)
-    # pdb.set_trace()
     # mc = multichannel
     for pred_label, gt_label_mc in six.moves.zip(pred_labels, gt_labels):
         for channel in range(gt_label_mc.shape[-1]):
+            pdb.set_trace()
             if pred_label.ndim != 2 or gt_label_mc[:,:,channel].ndim != 2:
                 raise ValueError('ndim of labels should be two.')
             if pred_label.shape != gt_label_mc[:,:,channel].shape:
@@ -98,8 +98,9 @@ def calc_semantic_segmentation_iou_uncert(confusion):
 
     """
     nclass = confusion.shape[0]//2
+    # pdb.set_trace()
     iou_numerator = np.diag(confusion[:nclass, :nclass])
-    iou_denominator = np.diag(confusion[nclass:,:nclass]) + iou_numerator
+    iou_denominator = np.diag(confusion[:nclass,nclass:])
     # iou_denominator = (confusion.sum(axis=1) + confusion.sum(axis=0)
     #                    - np.diag(confusion))
     iou = iou_numerator / iou_denominator

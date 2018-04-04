@@ -122,11 +122,11 @@ def get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop,
 
     trainer.extend(extensions.ProgressBar(update_interval=5))
 
-    trainer.extend(extensions.LogReport(
-        trigger=(1, 'epoch')))
+    trainer.extend(extensions.LogReport(trigger=(1, 'epoch')))
     trainer.extend(extensions.PrintReport(
         ['epoch', 'iteration', 'elapsed_time',
          'main/loss', 'validation/main/miou', 'validation_1/main/miou']))
+
 
     def pred_func(x):
         model(x)
@@ -142,21 +142,21 @@ def get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop,
     trainer.extend(
         chainercv.extensions.SemanticSegmentationEvaluator(
             iter_valid, model, label_names=class_names),
-        trigger=(5, 'epoch'))
+        trigger=(1, 'epoch'))
 
     trainer.extend(
         chainercv.extensions.SemanticSegmentationEvaluator(
             iter_train_nocrop, model, label_names=class_names),
-        trigger=(5, 'epoch'))
+        trigger=(1, 'epoch'))
     trainer.extend(
         fcn.SemanticSegmentationUncertEvaluator(
             iter_valid_uncert, model, label_names=class_names),
-        trigger=(5, 'epoch'))
+        trigger=(1, 'epoch'))
 
     trainer.extend(
         fcn.SemanticSegmentationUncertEvaluator(
             iter_train_nocrop_uncert, model, label_names=class_names),
-        trigger=(5, 'epoch'))
+        trigger=(1, 'epoch'))
 
     # trainer.extend(extensions.snapshot_object(
     #     target=model, filename='model_best.npz'),
@@ -164,13 +164,13 @@ def get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop,
     #         key='validation/main/miou',
     #         trigger=(1, 'epoch')))
 
-    assert extensions.PlotReport.available()
-    trainer.extend(extensions.PlotReport(
-        y_keys=['main/loss'], x_key='epoch',
-        file_name='loss.png', trigger=(1, 'epoch')))
-    trainer.extend(extensions.PlotReport(
-        y_keys=['validation/main/miou', 'validation_1/main/miou'], x_key='epoch',
-        file_name='miou.png', trigger=(1, 'epoch')))
+    # assert extensions.PlotReport.available()
+    # trainer.extend(extensions.PlotReport(
+    #     y_keys=['main/loss'], x_key='epoch',
+    #     file_name='loss.png', trigger=(1, 'epoch')))
+    # trainer.extend(extensions.PlotReport(
+    #     y_keys=['validation/main/miou', 'validation_1/main/miou'], x_key='epoch',
+    #     file_name='miou.png', trigger=(1, 'epoch')))
 
     return trainer
 
