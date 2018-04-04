@@ -122,12 +122,12 @@ def get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop,
         trainer.extend(
             chainercv.extensions.SemanticSegmentationEvaluator(
                 iter_valid, model, label_names=class_names),
-            trigger=(1, 'epoch'))
+            trigger=(10, 'epoch'))
 
         trainer.extend(
             chainercv.extensions.SemanticSegmentationEvaluator(
                 iter_train_nocrop, model, label_names=class_names),
-            trigger=(1, 'epoch'))
+            trigger=(10, 'epoch'))
     elif args.uncertainty == 2:
         trainer.extend(
             fcn.SemanticSegmentationUncertEvaluator(
@@ -207,11 +207,11 @@ def main():
     #     train_fold_nocrop, batch_size=4, repeat=False, shuffle=False)
 
     iter_train = chainer.iterators.MultiprocessIterator(
-                 dataset_train, batch_size=4, repeat=True, shuffle=True)
+                 dataset_train, batch_size=8, repeat=True, shuffle=True)
     iter_valid = chainer.iterators.MultiprocessIterator(
-                 dataset_valid_nocrop, batch_size=4, n_prefetch = 5, repeat=False, shuffle=False)
+                 dataset_valid_nocrop, batch_size=4, n_prefetch = 4, repeat=False, shuffle=False)
     iter_train_nocrop = chainer.iterators.MultiprocessIterator(
-                 dataset_train_nocrop, batch_size=4, n_prefetch = 5,  repeat=False, shuffle=False)
+                 dataset_train_nocrop, batch_size=4, n_prefetch = 4,  repeat=False, shuffle=False)
 
     # model
     vgg = fcn.models.VGG16()

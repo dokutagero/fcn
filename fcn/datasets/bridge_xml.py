@@ -242,12 +242,16 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         xmax = np.where(deck == 1)[0]
         ymin = np.where(deck == 1)[1]
         ymax = np.where(deck == 1)[1]
-        xmin = np.min(xmin)
-        xmax = np.max(xmax)
-        ymin = np.min(ymin)
-        ymax = np.max(ymax)
-        lbl = lbl[xmin:xmax, ymin:ymax]
-        img = img[xmin:xmax, ymin:ymax, :]
+        try:
+            xmin = np.min(xmin)
+            xmax = np.max(xmax)
+            ymin = np.min(ymin)
+            ymax = np.max(ymax)
+            lbl = lbl[xmin:xmax, ymin:ymax]
+            img = img[xmin:xmax, ymin:ymax, :]
+        except:
+            print name
+            pdb.set_trace()
             
         if (xmax - xmin) < self.rcrop[0]:
             lbl = np.pad(lbl, [(self.rcrop[0]/2, self.rcrop[0]/2), (0,0)], mode='constant', constant_values=-1)
