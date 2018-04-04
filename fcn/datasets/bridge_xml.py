@@ -149,7 +149,7 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
             # deck = np.zeros(decks[0].shape)
             # deck = sum(decks)[:,:,0]
             # deck[deck>0] = 255
-            img, lbl = self.black_out_non_deck_fn(img, lbl, deck)
+            img, lbl = self.black_out_non_deck_fn(img, lbl, deck, lbl_file)
 
 
         if self.rcrop.any() != None:
@@ -226,22 +226,35 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         return color_map[image]
 
 
-    def black_out_non_deck_fn(self, img, lbl, deck):
+    def black_out_non_deck_fn(self, img, lbl, deck, name):
         assert deck.shape[0:2] == img.shape[0:2]
         assert img.shape[2] == 3
+        # pdb.set_trace()
         # assert len(deck.shape) == 2
         # assert lbl.shape == deck.shape
         deck = deck/255  #so that deck is 1 or 0
         lbl[deck==0] = -1  #make everything none deck as class -1
         deck = np.repeat(deck[:,:,np.newaxis], 3, axis=2)  #duplicate deck into the 3rd dimension
         img = img * deck.astype('uint8') 
-        if self.split == 'validation' or self.split == 'train' and self.tstrategy==2:
-            xmin = np.min(np.where(deck == 1)[0])
-            xmax = np.max(np.where(deck == 1)[0])
-            ymin = np.min(np.where(deck == 1)[1])
-            ymax = np.max(np.where(deck == 1)[1])
-            lbl = lbl[xmin:xmax+1, ymin:ymax+1]
-            img = img[xmin:xmax+1, ymin:ymax+1, :]
+        # cropping not useful part of image and label
+        # if self.split == 'validation' or (self.split == 'train' and self.tstrategy==2):
+        xmin = np.where(deck == 1)[0]
+        xmax = np.where(deck == 1)[0]
+        ymin = np.where(deck == 1)[1]
+        ymax = np.where(deck == 1)[1]
+        xmin = np.min(xmin)
+        xmax = np.max(xmax)
+        ymin = np.min(ymin)
+        ymax = np.max(ymax)
+        lbl = lbl[xmin:xmax, ymin:ymax]
+        img = img[xmin:xmax, ymin:ymax, :]
+            
+        if (xmax - xmin) < self.rcrop[0]:
+            lbl = np.pad(lbl, [(self.rcrop[0]/2, self.rcrop[0]/2), (0,0)], mode='constant', constant_values=-1)
+            img = np.pad(img, [(self.rcrop[0]/2, self.rcrop[0]/2), (0,0), (0,0)], mode='constant', constant_values=0)
+        if (ymax - ymin) < self.rcrop[1]:
+            lbl = np.pad(lbl, [(0,0), (self.rcrop[0]/2, self.rcrop[0]/2)], mode='constant', constant_values=-1)
+            img = np.pad(img, [(0,0), (self.rcrop[0]/2, self.rcrop[0]/2), (0,0)], mode='constant', constant_values=0)
         return img, lbl
 
     def mask_preprocess(self, masks):

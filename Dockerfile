@@ -31,7 +31,7 @@ RUN pip install -U pip
 RUN pip install Cython
 RUN pip install git+https://github.com/cupy/cupy.git
 RUN pip install git+https://github.com/chainer/chainer.git
-RUN pip install gdown tqdm scipy matplotlib pandas piexif scikit-learn scikit-image imgaug chainerui chainercv xmltodict glances nvidia-ml-py3
+RUN pip install gdown tqdm scipy matplotlib pandas piexif scikit-learn scikit-image imgaug chainerui chainercv xmltodict glances nvidia-ml-py3 pyyaml
 
 WORKDIR /
 RUN wget https://github.com/opencv/opencv/archive/3.2.0.zip \

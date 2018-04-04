@@ -30,7 +30,7 @@ def get_data(deck_flag, data_augmentation, tstrategy, uncertainty):
     dataset_train = fcn.datasets.BridgeSeg(
         split='train',
         tstrategy=tstrategy,
-        rcrop=[256,256],
+        rcrop=[300,300],
         use_class_weight=class_weight_flag,
         black_out_non_deck=deck_flag,
         use_data_augmentation=data_augmentation,
@@ -128,7 +128,7 @@ def get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop,
             chainercv.extensions.SemanticSegmentationEvaluator(
                 iter_train_nocrop, model, label_names=class_names),
             trigger=(1, 'epoch'))
-    else:
+    elif args.uncertainty == 2:
         trainer.extend(
             fcn.SemanticSegmentationUncertEvaluator(
                 iter_valid, model, label_names=class_names),
