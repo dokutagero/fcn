@@ -45,10 +45,26 @@ def get_data(deck_flag, data_augmentation, tstrategy, uncertainty):
         use_class_weight=class_weight_flag,
         black_out_non_deck=deck_flag,
         use_data_augmentation=False,
+        uncertainty_label=0
+    )
+    dataset_valid_nocrop_uncert = fcn.datasets.BridgeSeg(
+        split='validation',
+        tstrategy=2,
+        use_class_weight=class_weight_flag,
+        black_out_non_deck=deck_flag,
+        use_data_augmentation=False,
         uncertainty_label=uncertainty
     )
 
     dataset_train_nocrop = fcn.datasets.BridgeSeg(
+        split='train',
+        tstrategy=2,
+        use_class_weight=class_weight_flag,
+        black_out_non_deck=deck_flag,
+        use_data_augmentation=False,
+        uncertainty_label=0
+    )
+    dataset_train_nocrop_uncert = fcn.datasets.BridgeSeg(
         split='train',
         tstrategy=2,
         use_class_weight=class_weight_flag,
@@ -64,6 +80,10 @@ def get_data(deck_flag, data_augmentation, tstrategy, uncertainty):
     dataset_train_nocrop = chainer.datasets.TransformDataset(
         dataset_train_nocrop, fcn.datasets.transform_lsvrc2012_vgg16)
 
+    dataset_valid_nocrop_uncert = chainer.datasets.TransformDataset(
+        dataset_valid_nocrop_uncert, fcn.datasets.transform_lsvrc2012_vgg16)
+    dataset_train_nocrop_uncert = chainer.datasets.TransformDataset(
+        dataset_train_nocrop_uncert, fcn.datasets.transform_lsvrc2012_vgg16)
     num_train_samples = len(dataset_train)
 
 
@@ -84,11 +104,12 @@ def get_data(deck_flag, data_augmentation, tstrategy, uncertainty):
 #         dataset_train_nocrop, batch_size=1, repeat=False, shuffle=False)
 
     #return num_train_samples, class_names, iter_train, iter_valid, iter_train_nocrop
-    return num_train_samples, class_names, dataset_train, dataset_train_nocrop, dataset_valid_nocrop
+    return num_train_samples, class_names, dataset_train, dataset_train_nocrop, dataset_valid_nocrop, dataset_train_nocrop_uncert, \
+           dataset_valid_nocrop_uncert
 
 
 def get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop,
-                class_names, args):
+                iter_valid_uncert, iter_train_nocrop_uncert,class_names, args):
     model = optimizer.target
 
     updater = chainer.training.StandardUpdater(
@@ -118,26 +139,24 @@ def get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop,
     #         class_names=class_names, device=args.gpu, shape=(4, 2)),
     #     trigger=(args.interval_eval, 'iteration'))
 
-    if args.uncertainty == 0:
-        trainer.extend(
-            chainercv.extensions.SemanticSegmentationEvaluator(
-                iter_valid, model, label_names=class_names),
-            trigger=(10, 'epoch'))
+    trainer.extend(
+        chainercv.extensions.SemanticSegmentationEvaluator(
+            iter_valid, model, label_names=class_names),
+        trigger=(5, 'epoch'))
 
-        trainer.extend(
-            chainercv.extensions.SemanticSegmentationEvaluator(
-                iter_train_nocrop, model, label_names=class_names),
-            trigger=(10, 'epoch'))
-    elif args.uncertainty == 2:
-        trainer.extend(
-            fcn.SemanticSegmentationUncertEvaluator(
-                iter_valid, model, label_names=class_names),
-            trigger=(1, 'epoch'))
+    trainer.extend(
+        chainercv.extensions.SemanticSegmentationEvaluator(
+            iter_train_nocrop, model, label_names=class_names),
+        trigger=(5, 'epoch'))
+    trainer.extend(
+        fcn.SemanticSegmentationUncertEvaluator(
+            iter_valid_uncert, model, label_names=class_names),
+        trigger=(5, 'epoch'))
 
-        trainer.extend(
-            fcn.SemanticSegmentationUncertEvaluator(
-                iter_train_nocrop, model, label_names=class_names),
-            trigger=(1, 'epoch'))
+    trainer.extend(
+        fcn.SemanticSegmentationUncertEvaluator(
+            iter_train_nocrop_uncert, model, label_names=class_names),
+        trigger=(5, 'epoch'))
 
     # trainer.extend(extensions.snapshot_object(
     #     target=model, filename='model_best.npz'),
@@ -171,6 +190,7 @@ def main():
     parser.add_argument('-t', '--tstrategy', type=int, default=0, choices=(0,1))
     parser.add_argument('-lu', '--learnable', type=int, default=0, choices=(0,1))
     parser.add_argument('-u', '--uncertainty', type=int, default=0, choices=(0,1))
+    parser.add_argument('-bs', '--bsize', type=int, default=4)
     args = parser.parse_args()
 
     args.model = 'FCN32s'
@@ -187,7 +207,7 @@ def main():
 #     num_train_samples, class_names, iter_train, iter_valid, iter_train_nocrop = get_data(args.deck_mask, \
 #                                                                       args.data_augmentation)
 # 
-    num_train_samples, class_names, dataset_train, dataset_train_nocrop, dataset_valid_nocrop = get_data(args.deck_mask, \
+    num_train_samples, class_names, dataset_train, dataset_train_nocrop, dataset_valid_nocrop, dataset_train_nocrop_uncert, dataset_valid_nocrop_uncert = get_data(args.deck_mask, \
                                                                       args.data_augmentation, args.tstrategy, args.uncertainty)
     now = datetime.datetime.now()
     args.timestamp = now.isoformat()
@@ -207,11 +227,15 @@ def main():
     #     train_fold_nocrop, batch_size=4, repeat=False, shuffle=False)
 
     iter_train = chainer.iterators.MultiprocessIterator(
-                 dataset_train, batch_size=8, repeat=True, shuffle=True)
+                 dataset_train, batch_size=args.bsize, repeat=True, shuffle=True)
     iter_valid = chainer.iterators.MultiprocessIterator(
                  dataset_valid_nocrop, batch_size=4, n_prefetch = 4, repeat=False, shuffle=False)
     iter_train_nocrop = chainer.iterators.MultiprocessIterator(
                  dataset_train_nocrop, batch_size=4, n_prefetch = 4,  repeat=False, shuffle=False)
+    iter_valid_uncert = chainer.iterators.MultiprocessIterator(
+                 dataset_valid_nocrop_uncert, batch_size=4, n_prefetch = 4, repeat=False, shuffle=False)
+    iter_train_nocrop_uncert = chainer.iterators.MultiprocessIterator(
+                 dataset_train_nocrop_uncert, batch_size=4, n_prefetch = 4,  repeat=False, shuffle=False)
 
     # model
     vgg = fcn.models.VGG16()
@@ -234,7 +258,7 @@ def main():
     model.upscore.disable_update()
 
     # trainer
-    trainer = get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop,
+    trainer = get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop, iter_valid_uncert, iter_train_nocrop_uncert,
                           class_names, args)
     trainer.run()
 

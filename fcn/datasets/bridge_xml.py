@@ -16,7 +16,6 @@ from .. import data
 
 from scripts import label2mask as l2m
 from scripts import deck2mask as d2m
-import pdb
 
 DATASET_BRIDGE_DIR = osp.expanduser('/root/bridge_dataset/')
 # DATASET_BRIDGE_DIR = osp.expanduser('/home/dokutagero/repos/dataset_bridge/')
@@ -149,7 +148,7 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
             # deck = np.zeros(decks[0].shape)
             # deck = sum(decks)[:,:,0]
             # deck[deck>0] = 255
-            img, lbl = self.black_out_non_deck_fn(img, lbl, deck, lbl_file)
+            img, lbl = self.black_out_non_deck_fn(img, lbl, deck)
 
 
         if self.rcrop.any() != None:
@@ -226,7 +225,7 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         return color_map[image]
 
 
-    def black_out_non_deck_fn(self, img, lbl, deck, name):
+    def black_out_non_deck_fn(self, img, lbl, deck):
         assert deck.shape[0:2] == img.shape[0:2]
         assert img.shape[2] == 3
         # pdb.set_trace()
@@ -242,16 +241,12 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         xmax = np.where(deck == 1)[0]
         ymin = np.where(deck == 1)[1]
         ymax = np.where(deck == 1)[1]
-        try:
-            xmin = np.min(xmin)
-            xmax = np.max(xmax)
-            ymin = np.min(ymin)
-            ymax = np.max(ymax)
-            lbl = lbl[xmin:xmax, ymin:ymax]
-            img = img[xmin:xmax, ymin:ymax, :]
-        except:
-            print name
-            pdb.set_trace()
+        xmin = np.min(xmin)
+        xmax = np.max(xmax)
+        ymin = np.min(ymin)
+        ymax = np.max(ymax)
+        lbl = lbl[xmin:xmax, ymin:ymax]
+        img = img[xmin:xmax, ymin:ymax, :]
             
         if (xmax - xmin) < self.rcrop[0]:
             lbl = np.pad(lbl, [(self.rcrop[0]/2, self.rcrop[0]/2), (0,0)], mode='constant', constant_values=-1)
@@ -275,9 +270,8 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
                 intersection *= (mask==c).astype(dtype=np.uint32)
                 union += ((mask==c).astype(dtype=np.uint32))
                 union = (union>0).astype(dtype=np.uint32)
-            new_mask[:, :, c][intersection == 1] = c
             new_mask[:, :, c][(1-union) == 1]= (c + len(self.class_names))
-
+            new_mask[:, :, c][intersection == 1] = c
         return new_mask
 
     def augment_image(self, img, lbl):
