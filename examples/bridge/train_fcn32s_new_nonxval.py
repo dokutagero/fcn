@@ -144,10 +144,10 @@ def get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop,
             iter_valid, model, label_names=class_names),
         trigger=(5, 'epoch'))
 
-    trainer.extend(
-        chainercv.extensions.SemanticSegmentationEvaluator(
-            iter_train_nocrop, model, label_names=class_names),
-        trigger=(5, 'epoch'))
+    # trainer.extend(
+    #     chainercv.extensions.SemanticSegmentationEvaluator(
+    #         iter_train_nocrop, model, label_names=class_names),
+    #     trigger=(5, 'epoch'))
     trainer.extend(
         fcn.SemanticSegmentationUncertEvaluator(
             iter_valid_uncert, model, label_names=class_names),
@@ -229,13 +229,13 @@ def main():
     iter_train = chainer.iterators.MultiprocessIterator(
                  dataset_train, batch_size=args.bsize, repeat=True, shuffle=True)
     iter_valid = chainer.iterators.MultiprocessIterator(
-                 dataset_valid_nocrop, batch_size=4, n_prefetch = 4, repeat=False, shuffle=False)
+                 dataset_valid_nocrop, batch_size=4, n_prefetch = 2, repeat=False, shuffle=False)
     iter_train_nocrop = chainer.iterators.MultiprocessIterator(
-                 dataset_train_nocrop, batch_size=4, n_prefetch = 4,  repeat=False, shuffle=False)
+                 dataset_train_nocrop, batch_size=4, n_prefetch = 2,  repeat=False, shuffle=False)
     iter_valid_uncert = chainer.iterators.MultiprocessIterator(
-                 dataset_valid_nocrop_uncert, batch_size=4, n_prefetch = 4, repeat=False, shuffle=False)
+                 dataset_valid_nocrop_uncert, batch_size=4, n_prefetch = 2, repeat=False, shuffle=False)
     iter_train_nocrop_uncert = chainer.iterators.MultiprocessIterator(
-                 dataset_train_nocrop_uncert, batch_size=4, n_prefetch = 4,  repeat=False, shuffle=False)
+                 dataset_train_nocrop_uncert, batch_size=4, n_prefetch = 2,  repeat=False, shuffle=False)
 
     # model
     vgg = fcn.models.VGG16()

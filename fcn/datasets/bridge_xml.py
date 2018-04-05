@@ -74,7 +74,7 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
                 did = did.strip()
                 img_file = osp.join(DATASET_BRIDGE_DIR, 'bridge_images/', '{}.jpg'.format(did))
                 #lbl_files = [did.split('/')[-2]+'/'+f for f in listdir(osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', did.split('/')[-2])) if f.startswith(did.split('/')[-1])]
-                lbl_files = [DATASET_BRIDGE_DIR+'bridge_masks_total/' + did +'_'+num+'.xml' for num in ['1', '2', '3']]
+                lbl_files = [DATASET_BRIDGE_DIR+'bridge_masks_xml/' + did +'_'+num+'.xml' for num in ['1', '2', '3']]
                 deck_files = ''
 
                 if self.black_out_non_deck:
@@ -82,7 +82,6 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
                     # deck_files = [did.split('/')[-2]+'/'+f for f in listdir(osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', did.split('/')[-2])) if f.startswith(did.split('/')[-1])]
                     deck_files = lbl_files
 
-                # print(deck_files)
                 self.files[split].append({
                     'img' : img_file,
                     'lbl' : lbl_files,
@@ -93,27 +92,18 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
         return len(self.files[self.split])
 
     def get_example(self, index):
-        # if self.uncertainty_label == 1:
-        #     pdb.set_trace()
         data_file = self.files[self.split][index]
         img_file = data_file['img']
+        # :print data_file
         # piexif.remove(img_file)
         img = Image.open(img_file)
         imsize = img.size
-        # wsize = int(float(img.size[0]) * 0.5)
-        # hsize = int(float(img.size[1]) * 0.5)
-        # img = img.resize((wsize, hsize))
         img = np.array(img, dtype=np.uint8)
         if self.split == 'train':
-            #if self.tstrategy == 0 or self.uncertainty_label == 0:
             if self.tstrategy == 0 or self.tstrategy == 2:
-                # pdb.set_trace()
                 lbl_file = random.choice(data_file['lbl']) 
-                # lbl_file = data_file['lbl'][0]
-                # print lbl_file
 
                 lbl_name = osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', lbl_file)
-                # pdb.set_trace()
                 lbl = l2m(lbl_name, imsize)
 
                 lbl = np.array(lbl, dtype=np.int32)

@@ -48,7 +48,7 @@ def calc_semantic_segmentation_confusion_uncert(pred_labels, gt_labels):
             if pred_label.shape != gt_label_mc[:,:,channel].shape:
                 raise ValueError('Shape of ground truth and prediction should'
                                  ' be same.')
-            pdb.set_trace()
+            # pdb.set_trace()
             pred_label_flat = pred_label.flatten()
             gt_label = gt_label_mc[:,:,channel].flatten()
 
