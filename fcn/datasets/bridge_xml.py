@@ -108,8 +108,8 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
             #if self.tstrategy == 0 or self.uncertainty_label == 0:
             if self.tstrategy == 0 or self.tstrategy == 2:
                 # pdb.set_trace()
-                #lbl_file = random.choice(data_file['lbl']) 
-                lbl_file = data_file['lbl'][0]
+                lbl_file = random.choice(data_file['lbl']) 
+                # lbl_file = data_file['lbl'][0]
                 # print lbl_file
 
                 lbl_name = osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', lbl_file)
@@ -124,7 +124,6 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
 
         elif self.split == 'validation':
             if self.uncertainty_label:
-                print(data_file)
                 lbl = self.get_uncertainty_label(data_file, imsize)
             else:
                 lbl_file = data_file['lbl'][0]

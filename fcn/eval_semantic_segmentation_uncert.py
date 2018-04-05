@@ -36,44 +36,60 @@ def calc_semantic_segmentation_confusion_uncert(pred_labels, gt_labels):
     gt_labels = iter(gt_labels)
 
     n_class = 0
+    channel_max = 0
     confusion = np.zeros((n_class, n_class*2), dtype=np.int64)
+    iou_dict = {0 : [0, 0], 1 : [0, 0], 2 : [0, 0]}
     # mc = multichannel
     for pred_label, gt_label_mc in six.moves.zip(pred_labels, gt_labels):
         for channel in range(gt_label_mc.shape[-1]):
-            pdb.set_trace()
+            # pdb.set_trace()
             if pred_label.ndim != 2 or gt_label_mc[:,:,channel].ndim != 2:
                 raise ValueError('ndim of labels should be two.')
             if pred_label.shape != gt_label_mc[:,:,channel].shape:
                 raise ValueError('Shape of ground truth and prediction should'
                                  ' be same.')
+            pdb.set_trace()
             pred_label_flat = pred_label.flatten()
             gt_label = gt_label_mc[:,:,channel].flatten()
 
             # Dynamically expand the confusion matrix if necessary.
-            lb_max = max(np.maximum(pred_label_flat, gt_label))
-            if lb_max >= n_class:
-                expanded_confusion = np.zeros(
-                    ((lb_max + 1), (lb_max + 1)), dtype=np.int64)
-                expanded_confusion[0:n_class, 0:n_class] = confusion
+            # lb_max = max((pred_label_flat +  gt_label))
+            # if lb_max >= n_class:
+            #     expanded_confusion = np.zeros(
+            #         ((lb_max + 1), (lb_max + 1)), dtype=np.int64)
+            #     expanded_confusion[0:n_class, 0:n_class] = confusion
 
-                n_class = lb_max + 1
-                confusion = expanded_confusion
+            #     n_class = lb_max + 1
+            #     confusion = expanded_confusion
 
             # Count statistics from valid pixels.
             mask = gt_label >= 0
-            confusion += np.bincount(
-                n_class * gt_label[mask].astype(int) +
-                pred_label_flat[mask], minlength=(n_class**2)).reshape((n_class, n_class))
+            res = pred_label_flat[mask] + gt_label[mask]
+            if channel == 0:
+                hits = len(np.where(res == 0)[0])
+                errors = len(np.where(res == 3)[0])
+            if channel == 1:
+                hits = len(np.where(res == 2)[0])
+                errors = len(np.where(res == 5)[0])
+            if channel == 2:
+                hits = len(np.where(res == 4)[0])
+                errors = len(np.where(res == 7)[0])
+            iou_dict[channel][0] = iou_dict[channel][0] + hits
+            iou_dict[channel][1] = iou_dict[channel][1] + errors
+            # confusion += np.bincount(
+            #     (n_class) * gt_label[mask].astype(int) +
+            #     pred_label_flat[mask], minlength=(channel_max * lb_max)).reshape((channel_max, lb_max))
             #import pdb; pdb.set_trace()
+            
 
     for iter_ in (pred_labels, gt_labels):
         # This code assumes any iterator does not contain None as its items.
         if next(iter_, None) is not None:
             raise ValueError('Length of input iterables need to be same')
-    return confusion
+    return iou_dict
 
 
-def calc_semantic_segmentation_iou_uncert(confusion):
+def calc_semantic_segmentation_iou_uncert(iou_dict):
     """Calculate Intersection over Union with a given confusion matrix.
 
     The definition of Intersection over Union (IoU) is as follows,
@@ -97,13 +113,16 @@ def calc_semantic_segmentation_iou_uncert(confusion):
         :math:`(n\_class,)`.
 
     """
-    nclass = confusion.shape[0]//2
-    # pdb.set_trace()
-    iou_numerator = np.diag(confusion[:nclass, :nclass])
-    iou_denominator = np.diag(confusion[:nclass,nclass:])
-    # iou_denominator = (confusion.sum(axis=1) + confusion.sum(axis=0)
-    #                    - np.diag(confusion))
-    iou = iou_numerator / iou_denominator
+    # nclass = confusion.shape[0]//2
+    # # pdb.set_trace()
+    # iou_numerator = np.diag(confusion[:nclass, :nclass])
+    # iou_denominator = np.diag(confusion[:nclass,nclass:])
+    # # iou_denominator = (confusion.sum(axis=1) + confusion.sum(axis=0)
+    # #                    - np.diag(confusion))
+    # iou = iou_numerator / iou_denominator
+    iou_num = np.array([iou_dict[0][0], iou_dict[1][0], iou_dict[2][0]])
+    iou_den = np.array([iou_dict[0][1], iou_dict[1][1], iou_dict[2][1]])
+    iou = iou_num / (iou_num + iou_den)
     return iou
 
 
@@ -178,13 +197,16 @@ def eval_semantic_segmentation_uncert(pred_labels, gt_labels):
     # Evaluation code is based on
     # https://github.com/shelhamer/fcn.berkeleyvision.org/blob/master/
     # score.py#L37
-    confusion = calc_semantic_segmentation_confusion_uncert(
-        pred_labels, gt_labels)
-    iou = calc_semantic_segmentation_iou_uncert(confusion)
+    # confusion = calc_semantic_segmentation_confusion_uncert(
+    #     pred_labels, gt_labels)
+    iou_dict = calc_semantic_segmentation_confusion_uncert(
+         pred_labels, gt_labels)
+    # iou = calc_semantic_segmentation_iou_uncert(confusion)
+    iou = calc_semantic_segmentation_iou_uncert(iou_dict)
     # pixel_accuracy = np.diag(confusion).sum() / confusion.sum()
     # class_accuracy = np.diag(confusion) / np.sum(confusion, axis=1)
 
-    return {'iou': iou, 'miou': iou}
+    return {'iou': iou, 'miou': np.mean(iou), 'miou_damage' : np.mean(iou[1:])}
             # 'pixel_accuracy': pixel_accuracy,
             # 'class_accuracy': class_accuracy,
             # 'mean_class_accuracy': np.nanmean(class_accuracy)}

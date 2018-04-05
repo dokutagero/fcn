@@ -142,21 +142,21 @@ def get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop,
     trainer.extend(
         chainercv.extensions.SemanticSegmentationEvaluator(
             iter_valid, model, label_names=class_names),
-        trigger=(1, 'epoch'))
+        trigger=(5, 'epoch'))
 
     trainer.extend(
         chainercv.extensions.SemanticSegmentationEvaluator(
             iter_train_nocrop, model, label_names=class_names),
-        trigger=(1, 'epoch'))
+        trigger=(5, 'epoch'))
     trainer.extend(
         fcn.SemanticSegmentationUncertEvaluator(
             iter_valid_uncert, model, label_names=class_names),
-        trigger=(1, 'epoch'))
+        trigger=(5, 'epoch'))
 
     trainer.extend(
         fcn.SemanticSegmentationUncertEvaluator(
             iter_train_nocrop_uncert, model, label_names=class_names),
-        trigger=(1, 'epoch'))
+        trigger=(5, 'epoch'))
 
     # trainer.extend(extensions.snapshot_object(
     #     target=model, filename='model_best.npz'),
