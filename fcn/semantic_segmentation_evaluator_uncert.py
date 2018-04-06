@@ -94,7 +94,7 @@ class SemanticSegmentationUncertEvaluator(chainer.training.extensions.Evaluator)
         #           'pixel_accuracy': result['pixel_accuracy'],
         #           'mean_class_accuracy': result['mean_class_accuracy']}
 
-        report = {'miou': result['miou']}
+        report = {'miou': result['miou'], 'miou_damage' : result['miou_damage']}
         #           'pixel_accuracy': result['pixel_accuracy'],
         #           'mean_class_accuracy': result['mean_class_accuracy']}
 

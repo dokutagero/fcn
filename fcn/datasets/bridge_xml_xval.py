@@ -26,13 +26,13 @@ class BridgeSegBaseXval(chainer.dataset.DatasetMixin):
     class_names = np.array(['non-damage', 'delamination', 'rebar_exposure'])
     class_weight_default = np.array([0.3610441, 4.6313269, 69.76223605]) #the weights will be multiplied with the loss value
 
-    def __init__(self, split='train', tstrategy=0,  use_data_augmentation=False, black_out_non_deck=False, use_class_weight=False, preprocess=False):
+    def __init__(self, split='train', tstrategy=0, uncertainty_label=0,  use_data_augmentation=False, black_out_non_deck=False, use_class_weight=False, preprocess=False):
         self.split = split
         self.black_out_non_deck = black_out_non_deck
         self.use_data_augmentation = use_data_augmentation
         self.preprocess = preprocess
         self.tstrategy = tstrategy
-        self.uncertainty_label = uncertainty_label`
+        self.uncertainty_label = uncertainty_label
         
         if use_class_weight:
             self.class_weight = BridgeSegBase.class_weight_default
@@ -59,7 +59,7 @@ class BridgeSegBaseXval(chainer.dataset.DatasetMixin):
             self.hooks_lbl = ia.HooksImages(activator=activator_lbl)
 
         self.files = collections.defaultdict(list)
-        for split in ['all_train']:
+        for split in ['all']:
             imgsets_file = osp.join(DATASET_BRIDGE_DIR, "{}.txt".format(split))
             for did in open(imgsets_file):
                 did = did.strip()
@@ -86,17 +86,25 @@ class BridgeSegBaseXval(chainer.dataset.DatasetMixin):
         img = Image.open(img_file)
         imsize = img.size
         img = np.array(img, dtype=np.uint8)
-        if self.split == 'all_train':
-            if self.tstrategy == 0 or self.tstrategy == 2:
+        if self.split == 'all':
+            if self.tstrategy == 0 :
                 lbl_file = random.choice(data_file['lbl']) 
 
+            elif self.tstrategy == 1:
+                # Intersection of lbls
+                pass
+
+            elif self.tstrategy == 2:
+                    lbl_file = data_file['lbl'][0]
+
+            if self.uncertainty_label == 0:
                 lbl_name = osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', lbl_file)
                 lbl = l2m(lbl_name, imsize)
 
                 lbl = np.array(lbl, dtype=np.int32)
                 lbl = self.color_class_label(lbl)
 
-            if self.uncertainty_label == 1:
+            elif self.uncertainty_label == 1:
                 lbl = self.get_uncertainty_label(data_file, imsize)
 
             #important: keep this BEFORE black_out_non_deck, as the histogram spreading sometimes causes the black area not to be fully black anymore
@@ -176,30 +184,28 @@ class BridgeSegBaseXval(chainer.dataset.DatasetMixin):
     def black_out_non_deck_fn(self, img, lbl, deck):
         assert deck.shape[0:2] == img.shape[0:2]
         assert img.shape[2] == 3
-        # pdb.set_trace()
-        # assert len(deck.shape) == 2
-        # assert lbl.shape == deck.shape
-        deck = deck/255  #so that deck is 1 or 0
-        lbl[deck==0] = -1  #make everything none deck as class -1
-        deck = np.repeat(deck[:,:,np.newaxis], 3, axis=2)  #duplicate deck into the 3rd dimension
-        img = img * deck.astype('uint8') 
-        # cropping not useful part of image and label
-        # if self.split == 'validation' or (self.split == 'train' and self.tstrategy==2):
-        x = np.where(deck == 1)[0]
-        y = np.where(deck == 1)[1]
-        xmin = np.min(x)
-        xmax = np.max(x)
-        ymin = np.min(y)
-        ymax = np.max(y)
-        lbl = lbl[xmin:xmax, ymin:ymax]
-        img = img[xmin:xmax, ymin:ymax, :]
             
-        if (xmax - xmin) < self.rcrop[0]:
-            lbl = np.pad(lbl, [(self.rcrop[0]/2, self.rcrop[0]/2), (0,0)], mode='constant', constant_values=-1)
-            img = np.pad(img, [(self.rcrop[0]/2, self.rcrop[0]/2), (0,0), (0,0)], mode='constant', constant_values=0)
-        if (ymax - ymin) < self.rcrop[1]:
-            lbl = np.pad(lbl, [(0,0), (self.rcrop[0]/2, self.rcrop[0]/2)], mode='constant', constant_values=-1)
-            img = np.pad(img, [(0,0), (self.rcrop[0]/2, self.rcrop[0]/2), (0,0)], mode='constant', constant_values=0)
+        deck = deck/255  #so that deck is 1 or 0
+        deck3d = np.repeat(deck[:,:,np.newaxis], 3, axis=2)  #duplicate deck into the 3rd dimension
+        img = img * deck3d.astype('uint8') 
+        lbl[deck==0] = -1  #make everything none deck as class -1
+        # If training we crop the deck area to avoid training on deck random crops
+        if self.tstrategy == 0 or self.tstrategy == 1:
+            x = np.where(deck == 1)[0]
+            y = np.where(deck == 1)[1]
+            xmin = np.min(x)
+            xmax = np.max(x)
+            ymin = np.min(y)
+            ymax = np.max(y)
+            lbl = lbl[xmin:xmax, ymin:ymax]
+            img = img[xmin:xmax, ymin:ymax, :]
+            
+            if (xmax - xmin) < self.rcrop[0]:
+                lbl = np.pad(lbl, [(self.rcrop[0]/2, self.rcrop[0]/2), (0,0)], mode='constant', constant_values=-1)
+                img = np.pad(img, [(self.rcrop[0]/2, self.rcrop[0]/2), (0,0), (0,0)], mode='constant', constant_values=0)
+            if (ymax - ymin) < self.rcrop[1]:
+                lbl = np.pad(lbl, [(0,0), (self.rcrop[0]/2, self.rcrop[0]/2)], mode='constant', constant_values=-1)
+                img = np.pad(img, [(0,0), (self.rcrop[0]/2, self.rcrop[0]/2), (0,0)], mode='constant', constant_values=0)
         return img, lbl
 
     def mask_preprocess(self, masks):
@@ -256,7 +262,7 @@ class BridgeSegBaseXval(chainer.dataset.DatasetMixin):
 class BridgeSegXval(BridgeSegBaseXval):
     def __init__(self, split='train', uncertainty_label=0, tstrategy=0, rcrop=[None, None], use_data_augmentation=False, black_out_non_deck=False, use_class_weight=False, preprocess=False):
 
-       super(BridgeSeg, self).__init__(split=split, uncertainty_label=uncertainty_label, tstrategy=tstrategy, use_data_augmentation=use_data_augmentation, black_out_non_deck=black_out_non_deck, use_class_weight=use_class_weight, preprocess=preprocess) 
+       super(BridgeSegXval, self).__init__(split=split, uncertainty_label=uncertainty_label, tstrategy=tstrategy, use_data_augmentation=use_data_augmentation, black_out_non_deck=black_out_non_deck, use_class_weight=use_class_weight, preprocess=preprocess) 
        if len(rcrop) == 2:
            self.rcrop = np.array(rcrop)
        else:
