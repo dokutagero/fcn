@@ -190,22 +190,26 @@ class BridgeSegBaseXval(chainer.dataset.DatasetMixin):
         img = img * deck3d.astype('uint8') 
         lbl[deck==0] = -1  #make everything none deck as class -1
         # If training we crop the deck area to avoid training on deck random crops
-        if self.tstrategy == 0 or self.tstrategy == 1:
-            x = np.where(deck == 1)[0]
-            y = np.where(deck == 1)[1]
-            xmin = np.min(x)
-            xmax = np.max(x)
-            ymin = np.min(y)
-            ymax = np.max(y)
+        x = np.where(deck == 1)[0]
+        y = np.where(deck == 1)[1]
+        xmin = np.min(x)
+        xmax = np.max(x)
+        ymin = np.min(y)
+        ymax = np.max(y)
+        if self.uncertainty == 0:
             lbl = lbl[xmin:xmax, ymin:ymax]
-            img = img[xmin:xmax, ymin:ymax, :]
-            
+        else:
+            lbl = lbl[xmin:xmax, ymin:ymax]
+        img = img[xmin:xmax, ymin:ymax, :]
+        
+        if self.tstrategy == 0 or self.tstrategy == 1:
             if (xmax - xmin) < self.rcrop[0]:
                 lbl = np.pad(lbl, [(self.rcrop[0]/2, self.rcrop[0]/2), (0,0)], mode='constant', constant_values=-1)
                 img = np.pad(img, [(self.rcrop[0]/2, self.rcrop[0]/2), (0,0), (0,0)], mode='constant', constant_values=0)
             if (ymax - ymin) < self.rcrop[1]:
                 lbl = np.pad(lbl, [(0,0), (self.rcrop[0]/2, self.rcrop[0]/2)], mode='constant', constant_values=-1)
                 img = np.pad(img, [(0,0), (self.rcrop[0]/2, self.rcrop[0]/2), (0,0)], mode='constant', constant_values=0)
+
         return img, lbl
 
     def mask_preprocess(self, masks):

@@ -39,6 +39,8 @@ def calc_semantic_segmentation_confusion_uncert(pred_labels, gt_labels):
     channel_max = 0
     confusion = np.zeros((n_class, n_class*2), dtype=np.int64)
     iou_dict = {0 : [0, 0], 1 : [0, 0], 2 : [0, 0]}
+    hits = np.zeros((1,3))
+    errors = np.zeros((1,3))
     # mc = multichannel
     for pred_label, gt_label_mc in six.moves.zip(pred_labels, gt_labels):
         for channel in range(gt_label_mc.shape[-1]):
@@ -65,17 +67,20 @@ def calc_semantic_segmentation_confusion_uncert(pred_labels, gt_labels):
             # Count statistics from valid pixels.
             mask = gt_label >= 0
             res = pred_label_flat[mask] + gt_label[mask]
-            if channel == 0:
-                hits = len(np.where(res == 0)[0])
-                errors = len(np.where(res == 3)[0])
-            if channel == 1:
-                hits = len(np.where(res == 2)[0])
-                errors = len(np.where(res == 5)[0])
-            if channel == 2:
-                hits = len(np.where(res == 4)[0])
-                errors = len(np.where(res == 7)[0])
-            iou_dict[channel][0] = iou_dict[channel][0] + hits
-            iou_dict[channel][1] = iou_dict[channel][1] + errors
+            # if channel == 0:
+            #     hits = len(np.where(res == 0)[0])
+            #     errors = len(np.where(res == 3)[0])
+            # if channel == 1:
+            #     hits = len(np.where(res == 2)[0])
+            #     errors = len(np.where(res == 5)[0])
+            # if channel == 2:
+            #     hits = len(np.where(res == 4)[0])
+            #     errors = len(np.where(res == 7)[0])
+            hits[0,channel] += (res == channel*2).sum()
+            errors[0,channel] += (res == (2 * channel + 3)).sum()
+            
+            # iou_dict[channel][0] = iou_dict[channel][0] + hits
+            # iou_dict[channel][1] = iou_dict[channel][1] + errors
             # confusion += np.bincount(
             #     (n_class) * gt_label[mask].astype(int) +
             #     pred_label_flat[mask], minlength=(channel_max * lb_max)).reshape((channel_max, lb_max))
@@ -86,10 +91,10 @@ def calc_semantic_segmentation_confusion_uncert(pred_labels, gt_labels):
         # This code assumes any iterator does not contain None as its items.
         if next(iter_, None) is not None:
             raise ValueError('Length of input iterables need to be same')
-    return iou_dict
+    return hits, errors
 
 
-def calc_semantic_segmentation_iou_uncert(iou_dict):
+def calc_semantic_segmentation_iou_uncert(hits, errors):
     """Calculate Intersection over Union with a given confusion matrix.
 
     The definition of Intersection over Union (IoU) is as follows,
@@ -120,9 +125,10 @@ def calc_semantic_segmentation_iou_uncert(iou_dict):
     # # iou_denominator = (confusion.sum(axis=1) + confusion.sum(axis=0)
     # #                    - np.diag(confusion))
     # iou = iou_numerator / iou_denominator
-    iou_num = np.array([iou_dict[0][0], iou_dict[1][0], iou_dict[2][0]])
-    iou_den = np.array([iou_dict[0][1], iou_dict[1][1], iou_dict[2][1]])
-    iou = iou_num / (iou_num + iou_den)
+    # iou_num = np.array([iou_dict[0][0], iou_dict[1][0], iou_dict[2][0]])
+    # iou_den = np.array([iou_dict[0][1], iou_dict[1][1], iou_dict[2][1]])
+    # iou = iou_num / (iou_num + iou_den)
+    iou = hits / (hits + errors)
     return iou
 
 
@@ -199,10 +205,10 @@ def eval_semantic_segmentation_uncert(pred_labels, gt_labels):
     # score.py#L37
     # confusion = calc_semantic_segmentation_confusion_uncert(
     #     pred_labels, gt_labels)
-    iou_dict = calc_semantic_segmentation_confusion_uncert(
+    hits, errors = calc_semantic_segmentation_confusion_uncert(
          pred_labels, gt_labels)
     # iou = calc_semantic_segmentation_iou_uncert(confusion)
-    iou = calc_semantic_segmentation_iou_uncert(iou_dict)
+    iou = calc_semantic_segmentation_iou_uncert(hits, errors)
     # pixel_accuracy = np.diag(confusion).sum() / confusion.sum()
     # class_accuracy = np.diag(confusion) / np.sum(confusion, axis=1)
 
