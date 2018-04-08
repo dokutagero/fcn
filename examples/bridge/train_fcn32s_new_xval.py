@@ -67,9 +67,9 @@ def get_data(deck_flag, data_augmentation, tstrategy, xval, uncertainty):
     num_train_samples = len(dataset_train)
 
     if xval>0:
-        dataset_cv = chainer.datasets.get_cross_validation_datasets_random(dataset_train, 5, 42)
-        dataset_nocrop_cv = chainer.datasets.get_cross_validation_datasets_random(dataset_nocrop, 5, 42)
-        dataset_nocrop_uncert_cv = chainer.datasets.get_cross_validation_datasets_random(dataset_nocrop_uncert, 5, 42)
+        dataset_cv = chainer.datasets.get_cross_validation_datasets_random(dataset_train, xval, 42)
+        dataset_nocrop_cv = chainer.datasets.get_cross_validation_datasets_random(dataset_nocrop, xval, 42)
+        dataset_nocrop_uncert_cv = chainer.datasets.get_cross_validation_datasets_random(dataset_nocrop_uncert, xval, 42)
 
     
 
@@ -93,28 +93,28 @@ def get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop,
     trainer.extend(extensions.ProgressBar(update_interval=5))
 
     trainer.extend(extensions.LogReport(
-        trigger=(1, 'epoch')))
+    trigger=(1, 'epoch')))
     trainer.extend(extensions.PrintReport(
-        ['epoch', 'iteration', 'elapsed_time',
-         'main/loss', 'validation/main/miou', 'validation_1/main/miou']))
-
+    ['epoch', 'iteration', 'elapsed_time',
+     'main/loss', 'validation/main/miou', 'validation_1/main/miou']))
+    
     def pred_func(x):
         model(x)
         return model.score
-
-
+    
+    
     trainer.extend(
         chainercv.extensions.SemanticSegmentationEvaluator(
             iter_valid, model, label_names=class_names),
         trigger=(1, 'epoch'))
-
+    
     trainer.extend(
         chainercv.extensions.SemanticSegmentationEvaluator(
             iter_train_nocrop, model, label_names=class_names),
         trigger=(1, 'epoch'))
     trainer.extend(
-        fcn.SemanticSegmentationUncertEvaluator(
-            iter_valid_uncert, model, label_names=class_names),
+    fcn.SemanticSegmentationUncertEvaluator(
+    iter_valid_uncert, model, label_names=class_names),
         trigger=(1, 'epoch'))
 
     trainer.extend(
@@ -122,14 +122,14 @@ def get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop,
             iter_train_uncert, model, label_names=class_names),
         trigger=(1, 'epoch'))
 
-    # trainer.extend(extensions.snapshot_object(
-    #     target=model, filename='model_best_{.updater.epoch}.npz'),
-    #     trigger=chainer.training.triggers.ManualScheduleTrigger(
-    #        args.epochs, 'epoch'))
+    trainer.extend(extensions.snapshot_object(
+        target=model, filename='model_best_{.updater.epoch}.npz'),
+        trigger=chainer.training.triggers.ManualScheduleTrigger(
+           args.epochs, 'epoch'))
 
-    # trainer.extend(extensions.snapshot(filename='trainer_snapshot_{.updater.epoch}.npz'),
-    #     trigger=chainer.training.triggers.ManualScheduleTrigger(
-    #        args.epochs, 'epoch'))
+    trainer.extend(extensions.snapshot(filename='trainer_snapshot_{.updater.epoch}.npz'),
+        trigger=chainer.training.triggers.ManualScheduleTrigger(
+           args.epochs, 'epoch'))
     # trainer.extend(extensions.snapshot_object(
     #     target=model, filename='model_best.npz'),
     #     trigger=chainer.training.triggers.MaxValueTrigger(
@@ -185,7 +185,7 @@ def main():
     args.timestamp = now.isoformat()
 
     for fold, (train_fold, valid_fold) in enumerate(dataset_cv):
-        experiment_name = 'fcn32' + '_uncertainty_' + str(args.uncertainty) + '_da_' + str(args.data_augmentation) + '_ts_' + str(args.tstrategy) + '_lu_' + str(args.learnable) + 'fold_' + str(fold)
+        experiment_name = 'fcn32' + '_uncertainty_' + str(args.uncertainty) + '_da_' + str(args.data_augmentation) + '_ts_' + str(args.tstrategy) + '_lu_' + str(args.learnable) + '_fold_' + str(fold)
         args.out = osp.join(here, 'logs', experiment_name + '_' + now.strftime('%Y%m%d_%H%M%S'))
 
         n_class = len(class_names)
@@ -197,15 +197,15 @@ def main():
         (train_fold_nocrop_uncert, valid_fold_nocrop_uncert) = dataset_nocrop_uncert_cv[fold]
 
         iter_train = chainer.iterators.MultiprocessIterator(
-                     train_fold, batch_size=args.bsize, n_prefetch=4, n_processes=4, repeat=True, shuffle=True)
+                     train_fold, batch_size=args.bsize, n_prefetch=8, n_processes=8, repeat=True, shuffle=True)
         iter_valid = chainer.iterators.MultiprocessIterator(
-                     valid_fold_nocrop, batch_size=4, n_prefetch=20, n_processes=8, repeat=False, shuffle=False, shared_mem=100000000)
+                     valid_fold_nocrop, batch_size=8, n_prefetch=20, n_processes=10, repeat=False, shuffle=False, shared_mem=100000000)
         iter_train_nocrop = chainer.iterators.MultiprocessIterator(
-                     train_fold_nocrop, batch_size=4, n_prefetch=20, n_processes=8, repeat=False, shuffle=False, shared_mem=100000000)
+                     train_fold_nocrop, batch_size=8, n_prefetch=20, n_processes=10, repeat=False, shuffle=False, shared_mem=100000000)
         iter_train_uncert = chainer.iterators.MultiprocessIterator(
-                     train_fold_nocrop_uncert, batch_size=4, n_prefetch=20, n_processes=8, repeat=False, shuffle=False, shared_mem=100000000)
+                     train_fold_nocrop_uncert, batch_size=8, n_prefetch=20, n_processes=10, repeat=False, shuffle=False, shared_mem=100000000)
         iter_valid_uncert = chainer.iterators.MultiprocessIterator(
-                     valid_fold_nocrop_uncert, batch_size=4, n_prefetch=20, n_processes=8, repeat=False, shuffle=False, shared_mem=100000000)
+                     valid_fold_nocrop_uncert, batch_size=8, n_prefetch=20, n_processes=10, repeat=False, shuffle=False, shared_mem=100000000)
 
         # model
         vgg = fcn.models.VGG16()
