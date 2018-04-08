@@ -1,4 +1,4 @@
-FROM nvidia/cuda:8.0-cudnn6-devel
+FROM nvidia/cuda:9.1-cudnn7-devel
 
 # Chainer
 RUN apt-get update -y && \
@@ -7,19 +7,11 @@ RUN apt-get update -y && \
     python-pip \
     python-setuptools \
     python-wheel \
-    git
-
-RUN pip install -U pip
-RUN pip install Cython
-RUN pip install git+https://github.com/cupy/cupy.git
-RUN pip install git+https://github.com/chainer/chainer.git
-RUN pip install gdown tqdm scipy matplotlib pandas piexif scikit-learn scikit-image imgaug chainerui
-
-# OpenCV
-RUN apt-get install -y \
+    git \
+    vim-nox \
+    # OpenCV
     build-essential \
     cmake \
-    git \
     wget \
     unzip \
     yasm \
@@ -34,6 +26,12 @@ RUN apt-get install -y \
     libavformat-dev \
     libpq-dev && \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
+
+RUN pip install -U pip
+RUN pip install Cython
+RUN pip install git+https://github.com/cupy/cupy.git
+RUN pip install git+https://github.com/chainer/chainer.git
+RUN pip install gdown tqdm scipy matplotlib pandas piexif scikit-learn scikit-image imgaug chainerui chainercv xmltodict glances nvidia-ml-py3 pyyaml
 
 WORKDIR /
 RUN wget https://github.com/opencv/opencv/archive/3.2.0.zip \
