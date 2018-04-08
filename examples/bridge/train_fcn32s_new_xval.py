@@ -197,7 +197,7 @@ def main():
         (train_fold_nocrop_uncert, valid_fold_nocrop_uncert) = dataset_nocrop_uncert_cv[fold]
 
         iter_train = chainer.iterators.MultiprocessIterator(
-                     train_fold, batch_size=args.bsize, n_prefetch=8, n_processes=8, repeat=True, shuffle=True)
+                     train_fold, batch_size=args.bsize, n_prefetch=10, n_processes=8, repeat=True, shuffle=True)
         iter_valid = chainer.iterators.MultiprocessIterator(
                      valid_fold_nocrop, batch_size=8, n_prefetch=20, n_processes=10, repeat=False, shuffle=False, shared_mem=100000000)
         iter_train_nocrop = chainer.iterators.MultiprocessIterator(
