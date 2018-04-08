@@ -122,16 +122,16 @@ class BridgeSegBaseXval(chainer.dataset.DatasetMixin):
             img, lbl = self.black_out_non_deck_fn(img, lbl, deck)
 
 
-            if self.rcrop.any() != None:
-                img,lbl = self.random_crop(img,lbl, self.rcrop)
+        if self.rcrop.any() != None:
+            img,lbl = self.random_crop(img,lbl, self.rcrop)
 
-            if self.use_data_augmentation:
-                lbl+=1 #imaug library pads with 0. We want the label to be padded with 'non-deck', which has the label -1, hence this cheap hack
-                img, lbl = self.augment_image(img,lbl)
-                lbl-=1
-                #if np.unique(lbl).shape[0] > len(self.class_names):
-                if np.unique(lbl).shape[0] > len(self.class_names)+1: #+1 because we add -1 as a label, whcih doesnt have a class name
-                    print('WARNING: someting is odd about the number of labeled classes in this image, the are {} (label: {})'.format(np.unique(lbl), lbl_file))
+        if self.use_data_augmentation:
+            lbl+=1 #imaug library pads with 0. We want the label to be padded with 'non-deck', which has the label -1, hence this cheap hack
+            img, lbl = self.augment_image(img,lbl)
+            lbl-=1
+            #if np.unique(lbl).shape[0] > len(self.class_names):
+            if np.unique(lbl).shape[0] > len(self.class_names)+1: #+1 because we add -1 as a label, whcih doesnt have a class name
+                print('WARNING: someting is odd about the number of labeled classes in this image, the are {} (label: {})'.format(np.unique(lbl), lbl_file))
 
 
         return img, lbl
@@ -196,10 +196,10 @@ class BridgeSegBaseXval(chainer.dataset.DatasetMixin):
         xmax = np.max(x)
         ymin = np.min(y)
         ymax = np.max(y)
-        if self.uncertainty == 0:
+        if self.uncertainty_label == 0:
             lbl = lbl[xmin:xmax, ymin:ymax]
         else:
-            lbl = lbl[xmin:xmax, ymin:ymax]
+            lbl = lbl[xmin:xmax, ymin:ymax, :]
         img = img[xmin:xmax, ymin:ymax, :]
         
         if self.tstrategy == 0 or self.tstrategy == 1:
