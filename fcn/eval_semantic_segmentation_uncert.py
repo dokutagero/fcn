@@ -118,6 +118,7 @@ def calc_semantic_segmentation_iou_uncert(hits, errors):
         :math:`(n\_class,)`.
 
     """
+    # pdb.set_trace()
     # nclass = confusion.shape[0]//2
     # # pdb.set_trace()
     # iou_numerator = np.diag(confusion[:nclass, :nclass])
@@ -209,10 +210,12 @@ def eval_semantic_segmentation_uncert(pred_labels, gt_labels):
          pred_labels, gt_labels)
     # iou = calc_semantic_segmentation_iou_uncert(confusion)
     iou = calc_semantic_segmentation_iou_uncert(hits, errors)
+    iou = iou[0].tolist()
     # pixel_accuracy = np.diag(confusion).sum() / confusion.sum()
     # class_accuracy = np.diag(confusion) / np.sum(confusion, axis=1)
+    # iou_dict = {
 
-    return {'iou': iou, 'miou': np.mean(iou), 'miou_damage' : np.mean(iou[1:])}
+    return {'iou': iou, 'miou': np.nanmean(iou)}
             # 'pixel_accuracy': pixel_accuracy,
             # 'class_accuracy': class_accuracy,
             # 'mean_class_accuracy': np.nanmean(class_accuracy)}

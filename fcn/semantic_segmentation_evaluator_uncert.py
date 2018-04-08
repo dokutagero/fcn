@@ -94,19 +94,19 @@ class SemanticSegmentationUncertEvaluator(chainer.training.extensions.Evaluator)
         #           'pixel_accuracy': result['pixel_accuracy'],
         #           'mean_class_accuracy': result['mean_class_accuracy']}
 
-        report = {'miou': result['miou'], 'miou_damage' : result['miou_damage']}
+        report = {'miou': result['miou']}
         #           'pixel_accuracy': result['pixel_accuracy'],
         #           'mean_class_accuracy': result['mean_class_accuracy']}
 
         if self.label_names is not None:
             for l, label_name in enumerate(self.label_names):
-                try:
-                    report['iou/{:s}'.format(label_name)] = result['iou'][l]
-                    #report['class_accuracy/{:s}'.format(label_name)] =\
-                    #    result['class_accuracy'][l]
-                except IndexError:
-                    report['iou/{:s}'.format(label_name)] = np.nan
-                    #report['class_accuracy/{:s}'.format(label_name)] = np.nan
+                # try:
+                report['iou/{:s}'.format(label_name)] = result['iou'][l]
+                #report['class_accuracy/{:s}'.format(label_name)] =\
+                #    result['class_accuracy'][l]
+                # except IndexError:
+                #     report['iou/{:s}'.format(label_name)] = np.nan
+                #     #report['class_accuracy/{:s}'.format(label_name)] = np.nan
 
         observation = dict()
         with reporter.report_scope(observation):
