@@ -106,21 +106,21 @@ def get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop,
     trainer.extend(
         chainercv.extensions.SemanticSegmentationEvaluator(
             iter_valid, model, label_names=class_names),
-        trigger=(50, 'epoch'))
+        trigger=(10, 'epoch'))
     
     trainer.extend(
         chainercv.extensions.SemanticSegmentationEvaluator(
             iter_train_nocrop, model, label_names=class_names),
-        trigger=(50, 'epoch'))
+        trigger=(10, 'epoch'))
     trainer.extend(
     fcn.SemanticSegmentationUncertEvaluator(
     iter_valid_uncert, model, label_names=class_names),
-        trigger=(50, 'epoch'))
+        trigger=(10, 'epoch'))
 
     trainer.extend(
         fcn.SemanticSegmentationUncertEvaluator(
             iter_train_uncert, model, label_names=class_names),
-        trigger=(50, 'epoch'))
+        trigger=(10, 'epoch'))
 
     trainer.extend(extensions.snapshot_object(
         target=model, filename='model_best_{.updater.epoch}.npz'),
@@ -197,15 +197,15 @@ def main():
         (train_fold_nocrop_uncert, valid_fold_nocrop_uncert) = dataset_nocrop_uncert_cv[fold]
 
         iter_train = chainer.iterators.MultiprocessIterator(
-                     train_fold, batch_size=args.bsize, n_prefetch=10, n_processes=8, repeat=True, shuffle=True)
+                     train_fold, batch_size=args.bsize, n_prefetch=16, n_processes=16, repeat=True, shuffle=True)
         iter_valid = chainer.iterators.MultiprocessIterator(
-                     valid_fold_nocrop, batch_size=8, n_prefetch=20, n_processes=10, repeat=False, shuffle=False, shared_mem=100000000)
+                     valid_fold_nocrop, batch_size=8, n_prefetch=16, n_processes=16, repeat=False, shuffle=False, shared_mem=100000000)
         iter_train_nocrop = chainer.iterators.MultiprocessIterator(
-                     train_fold_nocrop, batch_size=8, n_prefetch=20, n_processes=10, repeat=False, shuffle=False, shared_mem=100000000)
+                     train_fold_nocrop, batch_size=8, n_prefetch=16, n_processes=16, repeat=False, shuffle=False, shared_mem=100000000)
         iter_train_uncert = chainer.iterators.MultiprocessIterator(
-                     train_fold_nocrop_uncert, batch_size=8, n_prefetch=20, n_processes=10, repeat=False, shuffle=False, shared_mem=100000000)
+                     train_fold_nocrop_uncert, batch_size=8, n_prefetch=16, n_processes=16, repeat=False, shuffle=False, shared_mem=100000000)
         iter_valid_uncert = chainer.iterators.MultiprocessIterator(
-                     valid_fold_nocrop_uncert, batch_size=8, n_prefetch=20, n_processes=10, repeat=False, shuffle=False, shared_mem=100000000)
+                     valid_fold_nocrop_uncert, batch_size=8, n_prefetch=16, n_processes=16, repeat=False, shuffle=False, shared_mem=100000000)
 
         # model
         vgg = fcn.models.VGG16()
