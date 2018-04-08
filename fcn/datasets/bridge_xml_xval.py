@@ -87,22 +87,26 @@ class BridgeSegBaseXval(chainer.dataset.DatasetMixin):
         imsize = img.size
         img = np.array(img, dtype=np.uint8)
         if self.split == 'all':
-            if self.tstrategy == 0 :
+            if self.tstrategy == 0:
+                # Random sampling label
                 lbl_file = random.choice(data_file['lbl']) 
 
             elif self.tstrategy == 1:
+                # pdb.set_trace()
                 # Intersection of lbls
-                pass
+                lbl = self.get_label_intersection(data_file,imsize)
 
             elif self.tstrategy == 2:
                     lbl_file = data_file['lbl'][0]
 
             if self.uncertainty_label == 0:
-                lbl_name = osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', lbl_file)
-                lbl = l2m(lbl_name, imsize)
+                # creating label from name obtained by random sample or the fixed first set for validation
+                if self.tstrategy == 0 or self.tstrategy == 2:
+                    lbl_name = osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', lbl_file)
+                    lbl = l2m(lbl_name, imsize)
 
-                lbl = np.array(lbl, dtype=np.int32)
-                lbl = self.color_class_label(lbl)
+                    lbl = np.array(lbl, dtype=np.int32)
+                    lbl = self.color_class_label(lbl)
 
             elif self.uncertainty_label == 1:
                 lbl = self.get_uncertainty_label(data_file, imsize)
@@ -135,6 +139,29 @@ class BridgeSegBaseXval(chainer.dataset.DatasetMixin):
 
 
         return img, lbl
+
+    def get_label_intersection(self, data_file, imsize):
+        lbl_names = []
+        for label_file in data_file['lbl']:
+            lbl_names.append(osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', label_file))
+        masks = [self.color_class_label(l2m(m, imsize)) for m in lbl_names]
+        pdb.set_trace()
+
+        label_intersection = -1 * np.ones(masks[-1].shape).astype(np.int32)
+        for c in range(len(self.class_names)):
+            intersection = np.ones(masks[-1].shape)
+            for label in masks:
+                intersection = intersection * (label == c).astype(np.uint32)
+            label_intersection[intersection.astype(dtype=bool)] = c 
+        # values == 0 are intersection
+        # idcs_intersection1 = np.abs(masks[0] - masks[1])
+        # idcs_intersection2 = np.abs(masks[0] - masks[2])
+        # idcs_intersection3 = np.abs(masks[1] - masks[2])
+        # intersect = idcs_intersection1 + idcs_intersection2 + idcs_intersection3
+        # label_intersection[intersect == 0] = masks[0][intersect == 0]
+
+        return label_intersection
+
 
     def deck_intersection(self, decks):
         deck = 255 * np.ones(decks[0].shape).astype(dtype=np.int32)
