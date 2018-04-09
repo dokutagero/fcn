@@ -1,0 +1,3 @@
+#!/bin/bash
+
+docker run -it --runtime=nvidia --rm -v /Public/Teera/workspace:/root -p 5000:5000 --name=fcn fcn /bin/bash
