@@ -145,7 +145,7 @@ class BridgeSegBaseXval(chainer.dataset.DatasetMixin):
         for label_file in data_file['lbl']:
             lbl_names.append(osp.join(DATASET_BRIDGE_DIR, 'bridge_masks_xml/', label_file))
         masks = [self.color_class_label(l2m(m, imsize)) for m in lbl_names]
-        pdb.set_trace()
+        # pdb.set_trace()
 
         label_intersection = -1 * np.ones(masks[-1].shape).astype(np.int32)
         for c in range(len(self.class_names)):
