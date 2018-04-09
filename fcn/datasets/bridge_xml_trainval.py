@@ -81,6 +81,9 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
 
     def get_example(self, index):
         data_file = self.files[self.split][index]
+        # print data_file
+        # if self.split == 'validation':
+        #     pdb.set_trace()
         img_file = data_file['img']
         # piexif.remove(img_file)
         img = Image.open(img_file)
@@ -138,6 +141,8 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
                 print('WARNING: someting is odd about the number of labeled classes in this image, the are {} (label: {})'.format(np.unique(lbl), lbl_file))
 
 
+        # if self.split == 'validation':
+        #     pdb.set_trace()
         return img, lbl
 
     def get_label_intersection(self, data_file, imsize):
@@ -290,10 +295,10 @@ class BridgeSegBase(chainer.dataset.DatasetMixin):
 
         
 
-class BridgeSeg(BridgeSegBaseXval):
+class BridgeSeg(BridgeSegBase):
     def __init__(self, split='train', uncertainty_label=0, tstrategy=0, rcrop=[None, None], use_data_augmentation=False, black_out_non_deck=False, use_class_weight=False, preprocess=False):
 
-       super(BridgeSegXval, self).__init__(split=split, uncertainty_label=uncertainty_label, tstrategy=tstrategy, use_data_augmentation=use_data_augmentation, black_out_non_deck=black_out_non_deck, use_class_weight=use_class_weight, preprocess=preprocess) 
+       super(BridgeSeg, self).__init__(split=split, uncertainty_label=uncertainty_label, tstrategy=tstrategy, use_data_augmentation=use_data_augmentation, black_out_non_deck=black_out_non_deck, use_class_weight=use_class_weight, preprocess=preprocess) 
        if len(rcrop) == 2:
            self.rcrop = np.array(rcrop)
        else:

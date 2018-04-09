@@ -84,8 +84,8 @@ def get_data(deck_flag, data_augmentation, tstrategy, uncertainty):
         dataset_nocrop_val, fcn.datasets.transform_lsvrc2012_vgg16)
     dataset_nocrop_train_uncert = chainer.datasets.TransformDataset(
         dataset_nocrop_train_uncert, fcn.datasets.transform_lsvrc2012_vgg16)
-    dataset_nocrop_val = chainer.datasets.TransformDataset(
-        dataset_nocrop_val, fcn.datasets.transform_lsvrc2012_vgg16)
+    dataset_nocrop_val_uncert = chainer.datasets.TransformDataset(
+        dataset_nocrop_val_uncert, fcn.datasets.transform_lsvrc2012_vgg16)
 
     num_train_samples = len(dataset_train)
 
@@ -128,6 +128,7 @@ def get_trainer(optimizer, iter_train, iter_valid, iter_train_nocrop,
         chainercv.extensions.SemanticSegmentationEvaluator(
             iter_train_nocrop, model, label_names=class_names),
         trigger=(10, 'epoch'))
+
     trainer.extend(
     fcn.SemanticSegmentationUncertEvaluator(
     iter_valid_uncert, model, label_names=class_names),
@@ -213,11 +214,11 @@ def main():
     iter_valid = chainer.iterators.MultiprocessIterator(
                  dataset_nocrop_val, batch_size=8, n_prefetch=16, n_processes=16, repeat=False, shuffle=False, shared_mem=100000000)
     iter_train_nocrop = chainer.iterators.MultiprocessIterator(
-                 dataset_nocrop_train, batch_size=8, n_prefetch=16, n_processes=16, repeat=False, shuffle=False, shared_mem=100000000)
+                 dataset_nocrop_train, batch_size=8, n_prefetch=16, n_processes=16,repeat=False, shuffle=False, shared_mem=100000000)
     iter_train_uncert = chainer.iterators.MultiprocessIterator(
-                 dataset_nocrop_train_uncert, batch_size=8, n_prefetch=16, n_processes=16, repeat=False, shuffle=False, shared_mem=100000000)
+                 dataset_nocrop_train_uncert, batch_size=8, n_prefetch=16, n_processes=16,repeat=False, shuffle=False, shared_mem=100000000)
     iter_valid_uncert = chainer.iterators.MultiprocessIterator(
-                 dataset_nocrop_val_uncert, batch_size=8, n_prefetch=16, n_processes=16, repeat=False, shuffle=False, shared_mem=100000000)
+                 dataset_nocrop_val_uncert, batch_size=8, n_prefetch=16, n_processes=16,repeat=False, shuffle=False, shared_mem=100000000)
 
     # model
     vgg = fcn.models.VGG16()

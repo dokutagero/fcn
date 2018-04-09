@@ -129,7 +129,7 @@ def calc_semantic_segmentation_iou_uncert(hits, errors):
     # iou_num = np.array([iou_dict[0][0], iou_dict[1][0], iou_dict[2][0]])
     # iou_den = np.array([iou_dict[0][1], iou_dict[1][1], iou_dict[2][1]])
     # iou = iou_num / (iou_num + iou_den)
-    iou = hits / (hits + errors)
+    iou = np.divide(hits, hits+errors, out=np.zeros_like(hits), where=(hits+errors)!=0)
     return iou
 
 
@@ -215,7 +215,7 @@ def eval_semantic_segmentation_uncert(pred_labels, gt_labels):
     # class_accuracy = np.diag(confusion) / np.sum(confusion, axis=1)
     # iou_dict = {
 
-    return {'iou': iou, 'miou': np.nanmean(iou)}
+    return {'iou': iou, 'miou': np.mean(iou)}
             # 'pixel_accuracy': pixel_accuracy,
             # 'class_accuracy': class_accuracy,
             # 'mean_class_accuracy': np.nanmean(class_accuracy)}
