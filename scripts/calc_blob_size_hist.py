@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
 import numpy as np
 import os
 import xmltodict
@@ -7,7 +8,11 @@ import xmltodict
 from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 
-XML_FILE_PATH = '/Users/mrteera/workspace/blob_size/bridge_annotations_ie1/'
+
+def kilo(x, pos):
+    'The two args are the value and tick position'
+    return '{}k'.format(x*1e-3)
+
 
 def get_xml(filename):
     with open(filename) as fd:
@@ -43,13 +48,28 @@ def PolygonArea(damage_pt):
 
 
 def plot_hist(delamination_blob_size, rebar_exposure_blob_size):
-    plt.figure(1)
-    plt.hist(delamination_blob_size, bins=2500)
-    plt.title('Histogram of delamination blob size')
-    plt.figure(2)
+    formatter = FuncFormatter(kilo)
+
+    delamination_fig = plt.figure(1)
+    plt.xlabel('Pixels')
+    plt.ylabel('Frequency')
+    ax = plt.gca()
+    # ax.xaxis.set_major_formatter(formatter)
+    # plt.hist(delamination_blob_size, bins=1000, orientation='horizontal')
+    plt.hist(delamination_blob_size, bins=5000)
+    plt.title('Histogram of Delamination Blob Size')
+
+    rebar_exposure_fig = plt.figure(2)
+    plt.xlabel('Pixels')
+    plt.ylabel('Frequency')
+    ax = plt.gca()
+    # ax.yaxis.set_major_formatter(formatter)
     plt.hist(rebar_exposure_blob_size, bins=2500)
-    plt.title('Histogram of rebar_exposure blob size')
-    plt.show()
+    plt.title('Histogram of Rebar Exposure Blob Size')
+
+    delamination_fig.savefig('delamination_blog_hist.png')
+    rebar_exposure_fig.savefig('rebar_exposure_blog_hist.png')
+    # plt.show()
 
 
 def get_blob_sizes(xml_file):
@@ -84,15 +104,50 @@ def get_blob_sizes(xml_file):
 
 
 if __name__ == '__main__':
+    XML_FILE_PATH = '/Users/mrteera/workspace/blob_size/'
+    annotators = ['bridge_annotations_ie1/', 'bridge_annotations_ie2/', 'bridge_annotations_ie3/']
     delamination_areas = []
     rebar_exposure_areas = []
-    for deck in ['deck_a/', 'deck_c/', 'deck_d/', 'deck_e/']:
-        for xml_file in os.listdir(XML_FILE_PATH + deck):
-            delamination_blob_size, rebar_exposure_blob_size = get_blob_sizes(XML_FILE_PATH + deck + xml_file)
-            delamination_areas = delamination_areas + delamination_blob_size
-            rebar_exposure_areas = rebar_exposure_areas + rebar_exposure_blob_size
-    print('=-=-=-=-=-=-=-=-=-=-=-=- DELAMINATION =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-')
-    print(sorted(delamination_areas))
-    print('=-=-=-=-=-=-=-=-=-=-=- REBAR EXPOSURE =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-')
-    print(sorted(rebar_exposure_areas))
+    file_list = []
+    for annotator in annotators:
+        for deck in ['deck_a/', 'deck_c/', 'deck_d/', 'deck_e/']:
+            for xml_file in os.listdir(XML_FILE_PATH + annotator + deck):
+                file_list.append(XML_FILE_PATH + annotator + deck + xml_file)
+    # Remove duplicated XML files
+    xml_file_list = []
+    for file in file_list:
+        xml_file_list.append('/'.join(file.split('/')[-2:]))
+
+    final_xml_list = []
+    for xml_file in sorted(xml_file_list):
+        if xml_file_list.count(xml_file) == 3:
+            final_xml_list.append(xml_file)
+    final_xml_list = sorted(list(set(final_xml_list)))
+
+    for xml_file in final_xml_list:
+        # delamination_blob_sizes = []
+        # rebar_exposure_blob_sizes = []
+        for annotator in annotators:
+            delamination_blob_size, rebar_exposure_blob_size = get_blob_sizes(XML_FILE_PATH + annotator + xml_file)
+            # delamination_blob_sizes.append(delamination_blob_size)
+            # rebar_exposure_blob_sizes.append(rebar_exposure_blob_size)
+
+            if sum(rebar_exposure_blob_size) != 0:
+                rebar_exposure_areas = rebar_exposure_areas + rebar_exposure_blob_size
+            if sum(delamination_blob_size) != 0:
+                delamination_areas = delamination_areas + delamination_blob_size
+
+    # print(len(delamination_areas))
+    # print(len(rebar_exposure_areas))
+    delamination_areas = sorted(delamination_areas)
+    delamination_areas = delamination_areas[int(len(delamination_areas) * .05) : int(len(delamination_areas) * .95)]
+    rebar_exposure_areas = sorted(rebar_exposure_areas)
+    rebar_exposure_areas = rebar_exposure_areas[int(len(rebar_exposure_areas) * .05) : int(len(rebar_exposure_areas) * .95)]
+    # print('delamination len: ', len(delamination_areas))
+    # print('rebar exposure len: ', len(rebar_exposure_areas))
+
+    # print('=-=-=-=-=-=-=-=-=-=-=-=- DELAMINATION =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-')
+    # print(sorted(delamination_areas))
+    # print('=-=-=-=-=-=-=-=-=-=-=- REBAR EXPOSURE =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-')
+    # print(sorted(rebar_exposure_areas))
     plot_hist(delamination_areas, rebar_exposure_areas)
