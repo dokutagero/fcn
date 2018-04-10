@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
 import numpy as np
@@ -56,16 +58,19 @@ def plot_hist(delamination_blob_size, rebar_exposure_blob_size):
     ax = plt.gca()
     # ax.xaxis.set_major_formatter(formatter)
     # plt.hist(delamination_blob_size, bins=1000, orientation='horizontal')
-    plt.hist(delamination_blob_size, bins=5000)
+    plt.hist(delamination_blob_size, bins=100000)
+    plt.ylim(0, 2.5)
     plt.title('Histogram of Delamination Blob Size')
+    # plt.tight_layout()
 
     rebar_exposure_fig = plt.figure(2)
     plt.xlabel('Pixels')
     plt.ylabel('Frequency')
     ax = plt.gca()
     # ax.yaxis.set_major_formatter(formatter)
-    plt.hist(rebar_exposure_blob_size, bins=2500)
+    plt.hist(rebar_exposure_blob_size, bins=100000)
     plt.title('Histogram of Rebar Exposure Blob Size')
+    # plt.tight_layout()
 
     delamination_fig.savefig('delamination_blog_hist.png')
     rebar_exposure_fig.savefig('rebar_exposure_blog_hist.png')
@@ -104,7 +109,7 @@ def get_blob_sizes(xml_file):
 
 
 if __name__ == '__main__':
-    XML_FILE_PATH = '/Users/mrteera/workspace/blob_size/'
+    XML_FILE_PATH = '/root/blob_size/'
     annotators = ['bridge_annotations_ie1/', 'bridge_annotations_ie2/', 'bridge_annotations_ie3/']
     delamination_areas = []
     rebar_exposure_areas = []
@@ -143,8 +148,8 @@ if __name__ == '__main__':
     delamination_areas = delamination_areas[int(len(delamination_areas) * .05) : int(len(delamination_areas) * .95)]
     rebar_exposure_areas = sorted(rebar_exposure_areas)
     rebar_exposure_areas = rebar_exposure_areas[int(len(rebar_exposure_areas) * .05) : int(len(rebar_exposure_areas) * .95)]
-    # print('delamination len: ', len(delamination_areas))
-    # print('rebar exposure len: ', len(rebar_exposure_areas))
+    print('delamination len: ', len(delamination_areas))
+    print('rebar exposure len: ', len(rebar_exposure_areas))
 
     # print('=-=-=-=-=-=-=-=-=-=-=-=- DELAMINATION =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-')
     # print(sorted(delamination_areas))
