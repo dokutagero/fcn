@@ -173,7 +173,7 @@ def main():
                         help='Data augmentation flag. Default 0, 1 for data augmentation')
     parser.add_argument('-d', '--deck-mask', type=int, default=1, choices=(0,1),\
                         help='Applying deck mask. Default 1, 0 for not masking deck')
-    parser.add_argument('-e', '--epochs', type=int, default=100, choices=range(1000), \
+    parser.add_argument('-e', '--epochs', type=int, default=100, choices=range(2000), \
                         help='Number of epochs', metavar='range(0...2000)')
     parser.add_argument('-x', '--xval', type=int, default=5)
     parser.add_argument('-t', '--tstrategy', type=int, default=0, choices=(0,1))
